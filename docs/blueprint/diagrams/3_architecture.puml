@@ -1,0 +1,90 @@
+@startuml Clean_Architecture_English_Final
+skinparam componentStyle rectangle
+skinparam nodesep 50
+skinparam ranksep 60
+
+title High-Level Architecture & Data Flow - UniHub Workshop
+
+package "1. Client Layer" {
+  actor "Student\n(12k req/10m)" as student
+  actor "Admin\n(Organizer)" as admin
+  actor "Staff\n(Offline Zone)" as staff
+}
+
+package "2. Frontend Layer" {
+  component "Web App\n(React)" as web
+  component "Mobile App\n(React Native)" as mobile
+  database "Local SQLite\n(WatermelonDB)" as localdb
+}
+
+package "3. Backend API Layer" {
+  component "API Gateway (Express.js)" as api {
+    component "Rate Limiter" as rate_limit
+    component "Payment Controller" as payment
+    component "Admin / Upload API" as admin_api
+    component "Sync Manager" as sync
+  }
+}
+
+package "4. Buffer & Storage Layer" {
+  queue "RabbitMQ\n(Registration Queue)" as queue
+  database "Redis\n(Locks, Tokens, Keys)" as redis
+  database "File Storage\n(PDFs)" as storage
+}
+
+package "5. Data & Worker Layer" {
+  component "Background Workers\n(Node.js)" as workers
+  database "PostgreSQL\n(Primary DB)" as pg
+}
+
+cloud "External Systems" {
+  component "Payment Gateway" as ext_payment
+  component "AI Provider" as ext_ai
+  component "Legacy System" as ext_csv
+  component "Notification Sys" as ext_noti
+}
+
+' --- Alignments ---
+student -[hidden]right- admin
+admin -[hidden]right- staff
+web -[hidden]right- mobile
+rate_limit -[hidden]right- payment
+payment -[hidden]right- admin_api
+admin_api -[hidden]right- sync
+
+' --- 1. Student Flows (Registration, Payment & Realtime) ---
+student --> web : 1. Register / Pay
+api -up-> web : SSE: Real-time Seats
+web --> rate_limit : POST /register
+web --> payment : POST /pay
+
+rate_limit --> redis : Check Token Bucket
+rate_limit --> queue : Push Request
+
+payment --> redis : Check Idempotency Key
+payment -> ext_payment : Circuit Breaker
+
+' --- 2. Admin Flows (Management & Upload) ---
+admin --> web : 2. Manage Events / Upload PDF
+web --> admin_api : API Calls
+admin_api --> pg : CRUD Workshops
+admin_api --> storage : Save PDF File
+admin_api --> workers : Trigger AI Task
+
+' --- 3. Staff Flows (Offline Check-in) ---
+staff --> mobile : 3. Scan QR (Offline)
+mobile -> localdb : Save Locally
+mobile --> sync : Auto-sync (Online)
+sync --> pg : Update Status
+
+' --- 4. Worker Core Flows ---
+queue --> workers : Consume
+workers --> pg : Lock (FOR UPDATE)
+workers --> ext_noti : Send Email/App Push
+
+' --- 5. Background Jobs (AI & CSV) ---
+workers --> storage : Read PDF
+workers --> ext_ai : API (Summarize PDF)
+workers -.left.> ext_csv : Nightly Cronjob
+
+@enduml

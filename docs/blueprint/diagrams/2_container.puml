@@ -1,0 +1,52 @@
+@startuml C4_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C4 Level 2: Container Diagram - UniHub Workshop System
+
+Person(student, "Student", "Registers & pays")
+Person(admin, "Admin", "Manages events & PDFs")
+Person(staff, "Check-in Staff", "Scans QR offline")
+
+System_Boundary(c1, "UniHub Workshop System") {
+    Container(web_app, "Web App", "React, Vite", "Provides UI for Students (public) and Admins (RBAC).")
+    Container(mobile_app, "Check-in Mobile App", "React Native", "Provides QR scanning and offline storage.")
+    
+    Container(api_gateway, "Backend API", "Node.js, Express", "Handles logic, Rate Limiting, RBAC, Payments, and Real-time SSE.")
+    Container(worker, "Background Worker", "Node.js", "Processes queue, CSV streams, AI APIs, and sends notifications.")
+    
+    ContainerDb(db, "Primary Database", "PostgreSQL", "Stores core data. Handles pessimistic locking (FOR UPDATE).")
+    ContainerDb(redis, "Cache & Lock DB", "Redis", "Stores Idempotency Keys, Token Buckets, and Redlock.")
+    ContainerQueue(queue, "Message Broker", "RabbitMQ", "Buffers registration spikes (12k req/10m).")
+    ContainerDb(file_store, "File Storage", "Local/S3", "Stores uploaded PDF files from Admins.")
+    ContainerDb(local_db, "Local Database", "WatermelonDB/SQLite", "Stores offline check-in data on Staff's phone.")
+}
+
+System_Ext(payment_gw, "Payment Gateway", "External payment processor")
+System_Ext(noti_sys, "Notification System", "Email/Push/Telegram")
+System_Ext(ai_provider, "AI Provider (LLM)", "Generates summaries from PDFs")
+System_Ext(legacy_sys, "Legacy System", "Exports nightly student CSV")
+
+Rel(student, web_app, "Visits", "HTTPS")
+Rel(admin, web_app, "Manages via", "HTTPS")
+Rel(staff, mobile_app, "Uses", "HTTPS/Offline")
+
+Rel(web_app, api_gateway, "API calls & SSE for real-time seats", "JSON/HTTPS")
+Rel(mobile_app, api_gateway, "Syncs data to", "JSON/HTTPS")
+Rel(mobile_app, local_db, "Reads/Writes offline data", "SQLite")
+
+Rel(api_gateway, redis, "Checks Rate Limits & Idempotency", "TCP")
+Rel(api_gateway, queue, "Publishes registration events", "AMQP")
+Rel(api_gateway, file_store, "Saves uploaded PDFs", "File I/O")
+Rel(api_gateway, db, "Reads data", "SQL/TCP")
+Rel(api_gateway, payment_gw, "Processes transactions via Circuit Breaker", "HTTPS")
+
+Rel(worker, queue, "Consumes events", "AMQP")
+Rel(worker, db, "Writes tickets, Upserts CSV, Applies Locks", "SQL/TCP")
+Rel(worker, file_store, "Reads PDF files for AI", "File I/O")
+
+' Connect Worker to all 3 remaining external systems
+Rel(worker, noti_sys, "Triggers confirmation messages", "API")
+Rel(worker, ai_provider, "Sends text to generate summary", "API")
+Rel(worker, legacy_sys, "Reads nightly CSV files", "SFTP/Local")
+
+@enduml

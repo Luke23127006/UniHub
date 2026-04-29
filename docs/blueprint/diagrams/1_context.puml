@@ -1,0 +1,26 @@
+@startuml C4_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C4 Level 1: System Context - UniHub Workshop System
+
+Person(student, "Student", "Views real-time schedule, registers, pays fees, and receives QR codes.")
+Person(admin, "Admin (Organizer)", "Manages events, uploads PDFs, and views statistics.")
+Person(staff, "Check-in Staff", "Uses mobile app to scan QR codes at the venue (offline supported).")
+
+System(unihub, "UniHub Workshop", "Event management, registration, and check-in system supporting high concurrency and offline mode.")
+
+System_Ext(payment_gw, "Payment Gateway", "Processes transactions for paid workshops.")
+System_Ext(legacy_sys, "Legacy Student System", "Exports student data via CSV nightly.")
+System_Ext(ai_provider, "AI Provider (LLM)", "Generates workshop summaries from PDF files.")
+System_Ext(noti_sys, "Notification System", "Sends Email/Push/Telegram confirmations.")
+
+Rel(student, unihub, "Views schedule, registers, receives QR")
+Rel(admin, unihub, "Manages data, uploads PDF")
+Rel(staff, unihub, "Checks in students, syncs offline data")
+
+Rel(unihub, payment_gw, "Sends payment requests", "HTTPS")
+Rel(unihub, legacy_sys, "Reads nightly CSV files", "SFTP/Local")
+Rel(unihub, ai_provider, "Sends text for summarization", "API")
+Rel(unihub, noti_sys, "Triggers notifications", "API")
+
+@enduml
