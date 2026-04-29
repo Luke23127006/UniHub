@@ -1,0 +1,414 @@
+@startuml UniHub_Workshop_ERD
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor WhiteSmoke
+  BorderColor #555555
+  FontSize 12
+}
+skinparam package {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontColor #1C3A5A
+  FontStyle bold
+}
+hide circle
+
+' ============================================================
+' RBAC MODULE
+' ============================================================
+package "RBAC" {
+  entity "roles" as ROLES {
+    *id             : BIGINT <<PK>>
+    --
+    name            : VARCHAR(50) <<UNIQUE>>
+    description     : VARCHAR(255)
+    created_at      : TIMESTAMP
+  }
+
+  entity "permissions" as PERMISSIONS {
+    *id             : BIGINT <<PK>>
+    --
+    resource        : VARCHAR(100)
+    action          : VARCHAR(50)
+    description     : VARCHAR(255)
+  }
+
+  entity "role_permissions" as ROLE_PERMISSIONS {
+    *role_id        : BIGINT <<FK>>
+    *permission_id  : BIGINT <<FK>>
+    --
+    granted_at      : TIMESTAMP
+  }
+
+  entity "users" as USERS {
+    *id             : BIGINT <<PK>>
+    --
+    email           : VARCHAR(255) <<UNIQUE>>
+    password_hash   : VARCHAR(255)
+    full_name       : VARCHAR(255)
+    is_active       : BOOLEAN
+    last_login_at   : TIMESTAMP
+    created_at      : TIMESTAMP
+    updated_at      : TIMESTAMP
+  }
+
+  entity "user_roles" as USER_ROLES {
+    *user_id        : BIGINT <<FK>>
+    *role_id        : BIGINT <<FK>>
+    --
+    assigned_at     : TIMESTAMP
+    assigned_by     : BIGINT <<FK>>
+  }
+}
+
+' ============================================================
+' AUTHENTICATION & AUDIT
+' ============================================================
+package "Authentication & Audit" {
+  entity "user_sessions" as USER_SESSIONS {
+    *id             : BIGINT <<PK>>
+    --
+    user_id         : BIGINT <<FK>>
+    token_hash      : VARCHAR(512) <<UNIQUE>>
+    device_info     : VARCHAR(500)
+    ip_address      : VARCHAR(45)
+    expires_at      : TIMESTAMP
+    revoked_at      : TIMESTAMP
+    created_at      : TIMESTAMP
+  }
+
+  entity "login_logs" as LOGIN_LOGS {
+    *id             : BIGINT <<PK>>
+    --
+    user_id         : BIGINT <<FK>>
+    ip_address      : VARCHAR(45)
+    status          : ENUM('success','failed')
+    failure_reason  : VARCHAR(255)
+    created_at      : TIMESTAMP
+  }
+}
+
+' ============================================================
+' STUDENT MANAGEMENT
+' ============================================================
+package "Student Management" {
+  entity "students" as STUDENTS {
+    *id             : BIGINT <<PK>>
+    --
+    user_id         : BIGINT <<FK, UNIQUE>>
+    student_code    : VARCHAR(20) <<UNIQUE>>
+    full_name       : VARCHAR(255)
+    email           : VARCHAR(255)
+    faculty         : VARCHAR(255)
+    major           : VARCHAR(255)
+    enrollment_year : SMALLINT
+    is_active       : BOOLEAN
+    synced_at       : TIMESTAMP
+    created_at      : TIMESTAMP
+    updated_at      : TIMESTAMP
+  }
+
+  entity "csv_sync_logs" as CSV_SYNC_LOGS {
+    *id             : BIGINT <<PK>>
+    --
+    file_name       : VARCHAR(255)
+    file_path       : VARCHAR(500)
+    status          : ENUM('pending','processing','completed','failed')
+    total_rows      : INT
+    processed_rows  : INT
+    skipped_rows    : INT
+    error_rows      : INT
+    error_details   : TEXT
+    started_at      : TIMESTAMP
+    completed_at    : TIMESTAMP
+    created_at      : TIMESTAMP
+  }
+}
+
+' ============================================================
+' VENUE & WORKSHOP
+' ============================================================
+package "Venue & Workshop" {
+  entity "rooms" as ROOMS {
+    *id             : BIGINT <<PK>>
+    --
+    room_code       : VARCHAR(50) <<UNIQUE>>
+    name            : VARCHAR(255)
+    capacity        : INT
+    building        : VARCHAR(100)
+    floor           : SMALLINT
+    layout_image_url: VARCHAR(500)
+    is_active       : BOOLEAN
+  }
+
+  entity "speakers" as SPEAKERS {
+    *id             : BIGINT <<PK>>
+    --
+    full_name       : VARCHAR(255)
+    title           : VARCHAR(255)
+    organization    : VARCHAR(255)
+    bio             : TEXT
+    avatar_url      : VARCHAR(500)
+  }
+
+  entity "workshops" as WORKSHOPS {
+    *id             : BIGINT <<PK>>
+    --
+    title           : VARCHAR(500)
+    description     : TEXT
+    room_id         : BIGINT <<FK>>
+    event_day       : DATE
+    start_time      : TIMESTAMP
+    end_time        : TIMESTAMP
+    capacity        : INT
+    available_seats : INT
+    is_paid         : BOOLEAN
+    price           : DECIMAL(12,2)
+    status          : ENUM('draft','published','cancelled','completed')
+    cancelled_reason: VARCHAR(500)
+    created_by      : BIGINT <<FK>>
+    created_at      : TIMESTAMP
+    updated_at      : TIMESTAMP
+  }
+
+  entity "workshop_speakers" as WORKSHOP_SPEAKERS {
+    *workshop_id    : BIGINT <<FK>>
+    *speaker_id     : BIGINT <<FK>>
+    --
+    is_main_speaker : BOOLEAN
+    display_order   : SMALLINT
+  }
+}
+
+' ============================================================
+' AI SUMMARY
+' ============================================================
+package "AI Summary" {
+  entity "workshop_documents" as WORKSHOP_DOCUMENTS {
+    *id             : BIGINT <<PK>>
+    --
+    workshop_id     : BIGINT <<FK>>
+    original_file_name : VARCHAR(255)
+    storage_path    : VARCHAR(500)
+    file_size_bytes : BIGINT
+    mime_type       : VARCHAR(100)
+    upload_status   : ENUM('uploaded','processing','done','failed')
+    uploaded_by     : BIGINT <<FK>>
+    uploaded_at     : TIMESTAMP
+  }
+
+  entity "ai_summaries" as AI_SUMMARIES {
+    *id             : BIGINT <<PK>>
+    --
+    workshop_id     : BIGINT <<FK>>
+    document_id     : BIGINT <<FK>>
+    raw_text        : TEXT
+    summary_text    : TEXT
+    ai_model        : VARCHAR(100)
+    status          : ENUM('pending','processing','completed','failed')
+    retry_count     : SMALLINT
+    last_error      : TEXT
+    created_at      : TIMESTAMP
+    completed_at    : TIMESTAMP
+  }
+}
+
+' ============================================================
+' REGISTRATION & PAYMENT
+' ============================================================
+package "Registration & Payment" {
+  entity "registrations" as REGISTRATIONS {
+    *id             : BIGINT <<PK>>
+    --
+    student_id      : BIGINT <<FK>>
+    workshop_id     : BIGINT <<FK>>
+    status          : ENUM('pending_payment','confirmed','cancelled','waitlisted')
+    registered_at   : TIMESTAMP
+    confirmed_at    : TIMESTAMP
+    cancelled_at    : TIMESTAMP
+    cancellation_reason : VARCHAR(500)
+  }
+
+  entity "payments" as PAYMENTS {
+    *id             : BIGINT <<PK>>
+    --
+    registration_id : BIGINT <<FK>>
+    idempotency_key : VARCHAR(128) <<UNIQUE>>
+    amount          : DECIMAL(12,2)
+    currency        : CHAR(3)
+    gateway         : VARCHAR(100)
+    gateway_txn_id  : VARCHAR(255)
+    status          : ENUM('pending','processing','completed','failed','refunded')
+    payload_request : TEXT
+    payload_response: TEXT
+    initiated_at    : TIMESTAMP
+    completed_at    : TIMESTAMP
+    expires_at      : TIMESTAMP
+  }
+
+  entity "idempotency_keys" as IDEMPOTENCY_KEYS {
+    *id             : BIGINT <<PK>>
+    --
+    key_hash        : VARCHAR(128) <<UNIQUE>>
+    user_id         : BIGINT <<FK>>
+    resource_type   : VARCHAR(100)
+    resource_id     : BIGINT
+    response_status : SMALLINT
+    response_body   : TEXT
+    expires_at      : TIMESTAMP
+    created_at      : TIMESTAMP
+  }
+
+  entity "qr_codes" as QR_CODES {
+    *id             : BIGINT <<PK>>
+    --
+    registration_id : BIGINT <<FK, UNIQUE>>
+    code            : VARCHAR(128) <<UNIQUE>>
+    qr_image_url    : VARCHAR(500)
+    is_valid        : BOOLEAN
+    expires_at      : TIMESTAMP
+    generated_at    : TIMESTAMP
+  }
+}
+
+' ============================================================
+' CHECK-IN
+' ============================================================
+package "Check-in" {
+  entity "checkins" as CHECKINS {
+    *id             : BIGINT <<PK>>
+    --
+    registration_id : BIGINT <<FK, UNIQUE>>
+    qr_code_id      : BIGINT <<FK>>
+    checked_in_by   : BIGINT <<FK>>
+    is_offline      : BOOLEAN
+    device_id       : VARCHAR(255)
+    client_timestamp: TIMESTAMP
+    server_timestamp: TIMESTAMP
+    synced_at       : TIMESTAMP
+    created_at      : TIMESTAMP
+  }
+
+  entity "offline_sync_batches" as OFFLINE_SYNC_BATCHES {
+    *id             : BIGINT <<PK>>
+    --
+    device_id       : VARCHAR(255)
+    staff_user_id   : BIGINT <<FK>>
+    batch_data      : TEXT
+    total_records   : INT
+    synced_records  : INT
+    failed_records  : INT
+    sync_status     : ENUM('pending','processing','completed','partial_failed')
+    created_at      : TIMESTAMP
+    synced_at       : TIMESTAMP
+  }
+}
+
+' ============================================================
+' NOTIFICATIONS
+' ============================================================
+package "Notifications" {
+  entity "notification_templates" as NOTIFICATION_TEMPLATES {
+    *id             : BIGINT <<PK>>
+    --
+    event_type      : VARCHAR(100)
+    channel         : ENUM('app','email','telegram')
+    subject_template: VARCHAR(500)
+    body_template   : TEXT
+    is_active       : BOOLEAN
+    updated_at      : TIMESTAMP
+  }
+
+  entity "notification_events" as NOTIFICATION_EVENTS {
+    *id                     : BIGINT <<PK>>
+    --
+    event_type              : VARCHAR(100)
+    recipient_user_id       : BIGINT <<FK>>
+    related_entity_type     : VARCHAR(100)
+    related_entity_id       : BIGINT
+    payload                 : TEXT
+    status                  : ENUM('queued','processing','sent','failed')
+    retry_count             : SMALLINT
+    next_retry_at           : TIMESTAMP
+    created_at              : TIMESTAMP
+    processed_at            : TIMESTAMP
+  }
+
+  entity "notification_logs" as NOTIFICATION_LOGS {
+    *id                 : BIGINT <<PK>>
+    --
+    event_id            : BIGINT <<FK>>
+    channel             : ENUM('app','email','telegram')
+    recipient_address   : VARCHAR(500)
+    status              : ENUM('sent','failed','bounced')
+    error_message       : TEXT
+    sent_at             : TIMESTAMP
+  }
+}
+
+' ============================================================
+' STATISTICS CACHE
+' ============================================================
+package "Statistics Cache" {
+  entity "workshop_stats_cache" as WORKSHOP_STATS_CACHE {
+    *id                     : BIGINT <<PK>>
+    --
+    workshop_id             : BIGINT <<FK, UNIQUE>>
+    total_registrations     : INT
+    confirmed_registrations : INT
+    checked_in_count        : INT
+    available_seats         : INT
+    fill_rate               : DECIMAL(5,2)
+    total_revenue           : DECIMAL(12,2)
+    last_refreshed_at       : TIMESTAMP
+  }
+}
+
+' ============================================================
+' RELATIONSHIPS
+' ============================================================
+
+' RBAC
+ROLES          ||--o{ ROLE_PERMISSIONS      : "has"
+PERMISSIONS    ||--o{ ROLE_PERMISSIONS      : "granted to"
+ROLES          ||--o{ USER_ROLES            : "assigned to"
+USERS          ||--o{ USER_ROLES            : "has"
+USERS          ||--o{ USER_SESSIONS         : "owns"
+USERS          ||--o{ LOGIN_LOGS            : "generates"
+
+' Student
+USERS          |o--o| STUDENTS              : "linked to"
+USERS          ||--o{ WORKSHOPS             : "creates"
+
+' Venue & Workshop
+ROOMS          ||--o{ WORKSHOPS             : "hosts"
+WORKSHOPS      ||--o{ WORKSHOP_SPEAKERS     : "features"
+SPEAKERS       ||--o{ WORKSHOP_SPEAKERS     : "speaks at"
+
+' AI Summary
+WORKSHOPS      ||--o{ WORKSHOP_DOCUMENTS    : "has"
+WORKSHOPS      ||--o{ AI_SUMMARIES          : "summarized as"
+WORKSHOP_DOCUMENTS ||--o{ AI_SUMMARIES      : "source for"
+USERS          ||--o{ WORKSHOP_DOCUMENTS    : "uploads"
+
+' Registration & Payment
+STUDENTS       ||--o{ REGISTRATIONS         : "creates"
+WORKSHOPS      ||--o{ REGISTRATIONS         : "receives"
+REGISTRATIONS  ||--o| PAYMENTS              : "paid via"
+REGISTRATIONS  ||--|| QR_CODES              : "has"
+USERS          ||--o{ IDEMPOTENCY_KEYS      : "owns"
+
+' Check-in
+REGISTRATIONS  ||--o| CHECKINS              : "checked in via"
+QR_CODES       ||--o{ CHECKINS              : "used in"
+USERS          ||--o{ CHECKINS              : "performed by"
+USERS          ||--o{ OFFLINE_SYNC_BATCHES  : "submits"
+
+' Notifications
+USERS          ||--o{ NOTIFICATION_EVENTS   : "receives"
+NOTIFICATION_EVENTS ||--o{ NOTIFICATION_LOGS : "produces"
+
+' Stats Cache
+WORKSHOPS      ||--|| WORKSHOP_STATS_CACHE  : "cached in"
+
+@enduml
