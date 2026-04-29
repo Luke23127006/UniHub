@@ -1,0 +1,31 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Sinh viên" as student
+actor "Ban tổ chức" as admin
+actor "Nhân sự check-in" as staff
+actor "Hệ thống tự động" as system
+
+rectangle "UniHub Workshop" {
+  usecase "UC01_XemDanhSachWorkshop" as UC01
+  usecase "UC02_DangKyWorkshop" as UC02
+  usecase "UC03_QuanLyWorkshop" as UC03
+  usecase "UC04_XemThongKe" as UC04
+  usecase "UC05_TaoTomTatAI" as UC05
+  usecase "UC06_QuetMaQRCheckIn" as UC06
+  usecase "UC07_DongBoDuLieuSinhVien" as UC07
+}
+
+student --> UC01
+student --> UC02
+
+admin --> UC03
+admin --> UC04
+admin --> UC05
+
+staff --> UC06
+
+system --> UC07
+
+@enduml

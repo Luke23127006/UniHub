@@ -1,0 +1,8 @@
+| Section | Description |
+| :--- | :--- |
+| **Use Case Name** | UC04 - Xem Thống Kê Đăng Ký |
+| **Initial assumption** | Người dùng đã đăng nhập vào trang quản trị nội bộ (Admin) và có quyền hạn thuộc nhóm Ban tổ chức. |
+| **Normal** | 1. Ban tổ chức chọn chức năng Xem Thống Kê / Dashboard.<br>2. Hệ thống truy vấn, tổng hợp dữ liệu đăng ký của tất cả các workshop diễn ra trong sự kiện.<br>3. Hệ thống hiển thị các báo cáo: số lượng sinh viên đã đăng ký, số lượng chỗ còn trống, tỷ lệ lấp đầy, doanh thu thu phí (nếu có).<br>4. Ban tổ chức có thể xem thống kê theo từng ngày hoặc từng workshop cụ thể. |
+| **What can go wrong** | Truy vấn lượng lớn dữ liệu gây chậm hệ thống, đặc biệt khi sự kiện có hàng chục ngàn đăng ký: Hệ thống cần trả về lỗi timeout và yêu cầu thử lại sau, hoặc hệ thống nên sử dụng dữ liệu thống kê lưu sẵn (Materialized View / Cache). |
+| **Other activities** | Các tiến trình background chạy định kỳ để làm mới dữ liệu trong các bảng cache thống kê nhằm cải thiện tốc độ truy xuất. |
+| **System state on completion** | Trạng thái dữ liệu hệ thống không thay đổi; giao diện hiển thị các biểu đồ, số liệu cho Ban tổ chức xem. |
