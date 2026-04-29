@@ -1,0 +1,8 @@
+| Section | Description |
+| :--- | :--- |
+| **Use Case Name** | UC00 - Đăng Nhập / Xác Thực Hệ Thống |
+| **Initial assumption** | Người dùng mở ứng dụng hoặc trang web UniHub Workshop. |
+| **Normal** | 1. Người dùng nhập thông tin đăng nhập (email, mật khẩu, hoặc sử dụng SSO của trường).<br>2. Hệ thống kiểm tra thông tin định danh và mật khẩu/token.<br>3. Hệ thống phân tích dữ liệu và xác định vai trò của người dùng (Sinh viên, Ban tổ chức, Nhân sự check-in).<br>4. Hệ thống cấp phiên làm việc (session/token) với các quyền tương ứng và chuyển hướng người dùng đến màn hình tính năng phù hợp. |
+| **What can go wrong** | - Sai thông tin đăng nhập: Hệ thống báo lỗi và yêu cầu nhập lại.<br>- Sinh viên chưa có dữ liệu trong hệ thống (chưa được đồng bộ từ file CSV): Hệ thống thông báo không tìm thấy tài khoản hợp lệ và hướng dẫn liên hệ bộ phận hỗ trợ.<br>- Dịch vụ xác thực bên thứ 3 hoặc SSO của trường bị lỗi: Hệ thống thông báo bảo trì tạm thời đối với tính năng đăng nhập SSO. |
+| **Other activities** | Hệ thống ghi nhận lịch sử (log) đăng nhập để phục vụ việc kiểm soát quyền truy cập, phát hiện đăng nhập bất thường và phân tích an ninh. |
+| **System state on completion** | Người dùng đăng nhập thành công, phiên đăng nhập được khởi tạo với quyền hạn (Role-based Access Control - RBAC) xác định. Người dùng sẵn sàng thực hiện các Use Case tiếp theo. |
