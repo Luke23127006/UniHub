@@ -156,6 +156,9 @@ package "Venue & Workshop" {
     --
     title           : VARCHAR(500)
     description     : TEXT
+    status : VARCHAR (DRAFT, PUBLISHED, CANCELLED)
+    start_time : TIMESTAMP
+    end_time : TIMESTAMP
     room_id         : BIGINT <<FK>>
     event_day       : DATE
     start_time      : TIMESTAMP
@@ -227,13 +230,14 @@ package "Registration & Payment" {
     confirmed_at    : TIMESTAMP
     cancelled_at    : TIMESTAMP
     cancellation_reason : VARCHAR(500)
+    --
+    UNIQUE(student_id, workshop_id)
   }
 
   entity "payments" as PAYMENTS {
     *id             : BIGINT <<PK>>
     --
     registration_id : BIGINT <<FK>>
-    idempotency_key : VARCHAR(128) <<UNIQUE>>
     amount          : DECIMAL(12,2)
     currency        : CHAR(3)
     gateway         : VARCHAR(100)
@@ -279,6 +283,7 @@ package "Check-in" {
     *id             : BIGINT <<PK>>
     --
     registration_id : BIGINT <<FK, UNIQUE>>
+    scanned_by_user_id : UUID <<FK>>
     qr_code_id      : BIGINT <<FK>>
     checked_in_by   : BIGINT <<FK>>
     is_offline      : BOOLEAN
@@ -403,6 +408,7 @@ REGISTRATIONS  ||--o| CHECKINS              : "checked in via"
 QR_CODES       ||--o{ CHECKINS              : "used in"
 USERS          ||--o{ CHECKINS              : "performed by"
 USERS          ||--o{ OFFLINE_SYNC_BATCHES  : "submits"
+USERS          ||--o{ CHECKINS              : "scanned_by_user_id"
 
 ' Notifications
 USERS          ||--o{ NOTIFICATION_EVENTS   : "receives"

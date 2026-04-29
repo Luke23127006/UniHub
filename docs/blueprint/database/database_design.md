@@ -43,13 +43,13 @@ The atomic `WHERE available_seats > 0` guard at the database layer — combined 
 
 ### 3. Idempotency & Double-Charge Prevention ([UC02](../uc/UC02_DangKyWorkshop.md) — "Chống trừ tiền hai lần")
 
-Two complementary mechanisms:
+`idempotency_keys` table (Global API Idempotency) > The client generates a UUID before the first attempt and sends it in every retry (e.g., in the header). The server inserts it into `idempotency_keys` with `INSERT ... ON CONFLICT DO NOTHING.`
 
-**`payments.idempotency_key` (UNIQUE)**  
-The client generates a UUID before the first attempt and sends it in every retry. The server inserts with `INSERT ... ON CONFLICT DO NOTHING` and returns the stored result — retries are free.
+If it's a retry, the server immediately returns the cached `response_body`.
 
-**`idempotency_keys` table**  
-Stores the full `response_body` with a TTL (`expires_at`). Clients can query the outcome of any past request without re-triggering side effects. The table is shared across all resource types (`resource_type`, `resource_id`) so the pattern is reusable beyond payments.
+If it's new, the server processes the payment. The `payments` table does NOT need its own idempotency key; it only stores the `transaction_id` returned by the payment gateway.
+
+This table is shared across all resource types (`resource_type`, `resource_id`) and uses a TTL (`expires_at`) to auto-clean up old keys. `payments.expires_at` marks the deadline for a pending gateway response to allow background jobs to release held seats safely.
 
 `payments.expires_at` marks the deadline for a pending gateway response so a background job can safely release held seats after timeout.
 
@@ -60,13 +60,14 @@ The `payments` table captures:
 - `payload_request` / `payload_response` for full observability.
 - `expires_at` so a sweeper job can detect timed-out payments and roll back the seat reservation without leaving zombie records.
 
-The `registrations.status` field drives graceful degradation: a registration in `pending_payment` state keeps the seat reserved temporarily; on confirmed payment it transitions to `confirmed` and the QR code is generated.
+The `registrations.status` field drives graceful degradation: a registration in `pending_payment` state keeps the seat reserved temporarily; on confirmed payment it transitions to `confirmed` and the QR code is generated. It can also transition to `cancelled` if the admin cancels the workshop.
 
 ### 5. Offline Check-in & Sync ([UC06](../uc/UC06_QuetMaQRCheckIn.md) — "Check-in offline")
 
-`checkins.is_offline = TRUE` flags records that originated on the device while offline.  
-`checkins.client_timestamp` preserves the on-device time so the audit trail is accurate even after a delayed sync.  
-`offline_sync_batches` stores the raw batch payload from the mobile device, along with per-record counters (`synced_records`, `failed_records`), so partial failures are visible and retryable.  
+`checkins.is_offline = TRUE` flags records that originated on the device while offline.
+`checkins.client_timestamp` preserves the on-device time so the audit trail is accurate even after a delayed sync.
+`checkins.scanned_by_user_id` (FK → users.id) records exactly which staff member scanned the QR code, ensuring a complete audit trail for security and fraud prevention.
+`offline_sync_batches` stores the raw batch payload from the mobile device, along with per-record counters (`synced_records`, `failed_records`), so partial failures are visible and retryable.
 `checkins` has a UNIQUE constraint on `registration_id` to prevent duplicate check-ins when the same batch is submitted more than once during sync.
 
 ### 6. CSV Student Sync ([UC07](../uc/UC07_DongBoDuLieuSinhVien.md) — "Đồng bộ dữ liệu")
@@ -98,6 +99,14 @@ The `registrations.status` field drives graceful degradation: a registration in 
 
 `workshop_stats_cache` is a materialised summary table refreshed by a background cron job. It prevents full-scan aggregation queries during peak load. `last_refreshed_at` tells the frontend how stale the data is. For real-time seat counts, the frontend reads `workshops.available_seats` directly (kept hot in Redis in the production design).
 
+### 10. Workshop Scheduling & Lifecycle ([UC03](../uc/UC03_QuanLyWorkshop.md))
+
+Scheduling Constraints:
+workshops table explicitly requires `room_id`, `start_time`, and `end_time`. The backend API enforces scheduling rules by querying these fields to prevent double-booking a room (`WHERE room_id = ? AND (start_time < ? AND end_time > ?)`).
+
+Cancellation Lifecycle:
+Workshops do not use hard deletes. workshops.status (`DRAFT`, `PUBLISHED`, `CANCELLED`) manages visibility. If a workshop is cancelled, `registrations.status` is updated to `cancelled` to trigger the refund/notification pipeline without losing historical financial or registration data.
+
 ---
 
 ## Key Constraints Summary
@@ -110,7 +119,6 @@ The `registrations.status` field drives graceful degradation: a registration in 
 | `permissions` | UNIQUE `(resource, action)` | No duplicate permission pairs |
 | `workshops` | CHECK `available_seats >= 0` | No negative seat count |
 | `registrations` | UNIQUE `(student_id, workshop_id)` | One registration per student per workshop |
-| `payments` | UNIQUE `idempotency_key` | Prevent double charge |
 | `idempotency_keys` | UNIQUE `key_hash` | Idempotency lookup |
 | `qr_codes` | UNIQUE `code` | QR token uniqueness |
 | `qr_codes` | UNIQUE `registration_id` | One QR per registration |
