@@ -4,10 +4,11 @@ Tài liệu này định nghĩa cấu trúc Request và Response cho các API c�
 
 - **Cơ chế Versioning:** Sử dụng URI Versioning (v1).
 - **Base URL:** `http://localhost:3000/api` (hoặc domain thực tế khi deploy)
-- Headers bắt buộc (cho các API POST/PUT):
-  - `Content-Type: application/json`
-  - `Authorization: Bearer <token>`
-  - `X-Idempotency-Key: <uuid>` (Dùng cho API đăng ký vé)
+- **Quy ước Headers:**
+  - `Content-Type: application/json`: Bắt buộc với các request có body JSON (thường là POST/PUT/PATCH).
+  - `Authorization: Bearer <token>`: Chỉ bắt buộc với các endpoint có **Auth Required: Yes**.
+  - `X-Idempotency-Key: <uuid>`: Chỉ bắt buộc với các endpoint yêu cầu idempotency, ví dụ API đăng ký vé.
+  - Với các endpoint public hoặc webhook, chỉ gửi các header được yêu cầu ngay tại mô tả của endpoint đó.
 
 ---
 
