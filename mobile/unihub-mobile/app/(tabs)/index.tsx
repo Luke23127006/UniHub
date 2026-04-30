@@ -1,2 +1,5 @@
-import HomeScreen from '@/src/features/home';
-export default HomeScreen;
+import HomeScreen from '@/features/home/components/HomeScreen';
+
+export default function Index() {
+  return <HomeScreen />;
+}
