@@ -2,7 +2,7 @@
 
 ## Schema Overview
 
-The database is organised into **8 logical packages**. Each package maps directly to a bounded context in the system.
+The database is organised into **9 logical packages**. Each package maps directly to a bounded context in the system.
 
 | Package | Tables | Purpose |
 |---|---|---|
