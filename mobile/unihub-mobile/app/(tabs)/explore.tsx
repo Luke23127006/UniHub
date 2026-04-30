@@ -1,2 +1,5 @@
-import ExploreScreen from '@/src/features/explore';
-export default ExploreScreen;
+import ExploreScreen from '@/features/explore/components/ExploreScreen';
+
+export default function Explore() {
+  return <ExploreScreen />;
+}
