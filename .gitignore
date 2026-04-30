@@ -1,0 +1,2 @@
+.env
+redis-lock/node_modules
