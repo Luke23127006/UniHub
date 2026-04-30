@@ -62,4 +62,4 @@ Hệ thống phục vụ 3 nhóm người dùng chính với các quyền hạn 
 
 - **Check-in offline**: Sóng viễn thông và wifi tại sự kiện có thể không ổn định. Ứng dụng di động phải có Local Database lưu trữ lịch sử check-in tạm thời và cơ chế tự động đồng bộ lại (Auto-Sync) mà không làm mất mát dữ liệu khi có mạng.
 
-- **Tích hợp một chiều file CSV**: File CSV dữ liệu sinh viên có thể chứa dữ liệu trùng hoặc dòng bị lỗi. Hệ thống phải dùng phương pháp đọc luồng (Stream Processing) để tránh tràn bộ nhớ RAM và áp dụng kĩ thuật Upsert vào DB một cách liền mạch.
+- **Tích hợp một chiều file CSV**: File CSV dữ liệu sinh viên có thể chứa dữ liệu trùng hoặc dòng bị lỗi. Hệ thống phải dùng phương pháp đọc luồng (Stream Processing) để tránh tràn bộ nhớ RAM và áp dụng kỹ thuật Upsert vào DB một cách liền mạch.
