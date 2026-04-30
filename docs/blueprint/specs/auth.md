@@ -48,7 +48,7 @@ Bắt buộc phải chứa thông tin định danh và vai trò để giảm thi
 
 ## 3. Đặc tả Bảo vệ Endpoint (Security Specification)
 
-Mọi request từ Client gọi lên các API yêu cầu quyền hạn đều phải đi qua 2 tầng kiểm duyệt (Middleware) trên Backend.
+Mọi request từ Client gọi lên các API yêu cầu quyền hạn đều phải đi qua 3 tầng kiểm duyệt (Middleware) trên Backend.
 
 ### Tầng 1: Xác thực Token (Authentication Middleware)
 
