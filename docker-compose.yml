@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: unihub_postgres
+    restart: always
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - unihub_pg_data:/var/lib/postgresql/data
+    networks:
+      - unihub_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: unihub_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - unihub_redis_data:/data
+    networks:
+      - unihub_network
+
+volumes:
+  unihub_pg_data:
+  unihub_redis_data:
+
+networks:
+  unihub_network:
+    driver: bridge
