@@ -106,13 +106,15 @@ API public dùng để hiển thị lịch trình sự kiện trên Web/App.
 
 Hệ thống sẽ giữ chỗ tạm thời và yêu cầu thanh toán.
 
+`paymentUrl` là liên kết thanh toán mà sinh viên cần truy cập để hoàn tất giao dịch.
+
 ```json
 {
   "status": "success",
   "data": {
     "registrationId": "REG_123",
     "status": "PENDING_PAYMENT",
-    "paymentUrl": "https://mock-gateway.com/pay/REG_123", // Link thanh toán
+    "paymentUrl": "https://mock-gateway.com/pay/REG_123",
     "message": "Vui lòng hoàn tất thanh toán trong 15 phút để giữ chỗ."
   }
 }
