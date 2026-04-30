@@ -54,7 +54,7 @@ Hệ thống phục vụ 3 nhóm người dùng chính với các quyền hạn 
 ## Rủi ro và ràng buộc
 Đồ án này đối mặt với 5 bài toán kỹ thuật lớn bắt buộc phải giải quyết triệt để:
 
-- **Tranh chấp chỗ ngồi (Race Condition)**: Phải áp dụng cơ chế khóa ở tầng Database (ví dụ: Pessimistic Locking với SELECT ... FOR UPDATE) để ngăn ngừa lỗi cấp lố vé khi hàng trăm người giành giật các vị trí cuối.
+- **Tranh chấp chỗ ngồi (Race Condition)**: Phải áp dụng cơ chế khóa ở tầng Database (ví dụ: Pessimistic Locking với `SELECT ... FOR UPDATE`) để ngăn ngừa lỗi cấp lố vé khi hàng trăm người giành giật các vị trí cuối.
 
 - **Tải trọng đột biến (Spike Load)**: Backend API phải được bảo vệ bởi thuật toán Rate Limiting (Token Bucket) kết hợp với Message Broker (RabbitMQ) để đưa request vào hàng đợi, tránh sập server.
 
