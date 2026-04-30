@@ -17,7 +17,7 @@ services:
       - unihub_network
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:8.10
     container_name: unihub_pgadmin
     restart: always
     environment:
