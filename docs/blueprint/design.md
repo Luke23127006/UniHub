@@ -26,7 +26,7 @@ Sơ đồ này mô tả các tác nhân (Actors) và mối quan hệ của UniHu
 Sơ đồ phân rã hệ thống thành các Container có thể triển khai độc lập, thể hiện công nghệ (Node.js, PostgreSQL, Redis, RabbitMQ).
 
 ![Container Diagram](./diagrams/2_container.png)
-*> [File PUML](./diagrams/container.puml)*
+*> [File PUML](./diagrams/2_container.puml)*
 
 ---
 
