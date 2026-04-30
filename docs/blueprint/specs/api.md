@@ -136,8 +136,8 @@ Hệ thống xác nhận ngay và cấp mã QR.
 
 **Error Responses:**
 
-- `400 Bad Request`: `{"error": "SOLD_OUT", "message": "Workshop đã hết chỗ."}`
-- `429 Too Many Requests`: `{"error": "SYSTEM_BUSY", "message": "Hệ thống đang bận xử lý, vui lòng thử lại."}`
+- `400 Bad Request`: `{"status": "error", "error": {"code": "SOLD_OUT", "message": "Workshop đã hết chỗ."}}`
+- `429 Too Many Requests`: `{"status": "error", "error": {"code": "SYSTEM_BUSY", "message": "Hệ thống đang bận xử lý, vui lòng thử lại."}}`
 
 ## 2. Dành cho Ban Tổ Chức (Admin)
 
