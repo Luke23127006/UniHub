@@ -56,7 +56,7 @@ Nhiệm vụ: Kiểm tra xem request có phải từ một người dùng hợp 
 
 Quy trình:
 
-- Bóc tách Header Authorization. Nếu không có hoặc không bắt đầu bằng chữ Bearer , trả về lỗi 401 Unauthorized.
+- Bóc tách Header Authorization. Nếu không có hoặc không bắt đầu bằng prefix `Bearer ` (có một khoảng trắng ngay sau `Bearer`), trả về lỗi 401 Unauthorized.
 - Lấy chuỗi token và dùng Secret Key để verify chữ ký (Signature). Nếu chữ ký sai hoặc token đã bị sửa đổi, trả về 401 Unauthorized.
 - Kiểm tra trường exp. Nếu token đã hết hạn, trả về 401 Unauthorized kèm thông báo client dùng Refresh Token để xin cấp lại Access Token mới.
 - Nếu hợp lệ, gán payload của token vào object Request (ví dụ: req.user = decodedPayload) và cho phép đi qua tầng 2.
