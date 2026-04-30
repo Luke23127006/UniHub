@@ -1,4 +1,3 @@
-
 ## Bối cảnh
 
 Trường Đại học A tổ chức **“Tuần lễ kỹ năng và nghề nghiệp”** hàng năm. Sự kiện kéo dài 5 ngày, mỗi ngày có 8–12 workshop diễn ra song song tại nhiều phòng khác nhau. Hiện tại ban tổ chức quản lý đăng ký bằng Google Form và thông báo qua email thủ công — quy trình này không còn đáp ứng được nhu cầu khi quy mô ngày càng lớn.
