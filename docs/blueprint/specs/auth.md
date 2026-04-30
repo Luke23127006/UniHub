@@ -74,7 +74,7 @@ Quy trình:
 
 ### Tầng 3: Phân quyền theo Chủ sở hữu (Data Segregation - Dành riêng cho Student)
 
-Ngay cả khi Student gọi API có quyền Student (ví dụ: GET /api/v1/tickets/:ticketId), hệ thống phải kiểm tra thêm req.user.sub == ticket.ownerId.
+Ngay cả khi Student gọi API có quyền Student (ví dụ: GET /api/v1/tickets/:id), hệ thống phải kiểm tra thêm req.user.sub == ticket.ownerId.
 
 Nếu không trùng khớp, đánh chặn và trả về 403 Forbidden hoặc 404 Not Found để chống lỗi IDOR (Insecure Direct Object Reference - Sinh viên này lấy vé của sinh viên khác).
 
