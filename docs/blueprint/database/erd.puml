@@ -156,9 +156,6 @@ package "Venue & Workshop" {
     --
     title           : VARCHAR(500)
     description     : TEXT
-    status : VARCHAR (DRAFT, PUBLISHED, CANCELLED)
-    start_time : TIMESTAMP
-    end_time : TIMESTAMP
     room_id         : BIGINT <<FK>>
     event_day       : DATE
     start_time      : TIMESTAMP
@@ -237,7 +234,7 @@ package "Registration & Payment" {
   entity "payments" as PAYMENTS {
     *id             : BIGINT <<PK>>
     --
-    registration_id : BIGINT <<FK>>
+    registration_id : BIGINT <<FK, UNIQUE>>
     amount          : DECIMAL(12,2)
     currency        : CHAR(3)
     gateway         : VARCHAR(100)
@@ -283,9 +280,8 @@ package "Check-in" {
     *id             : BIGINT <<PK>>
     --
     registration_id : BIGINT <<FK, UNIQUE>>
-    scanned_by_user_id : UUID <<FK>>
+    scanned_by_user_id : BIGINT <<FK>>
     qr_code_id      : BIGINT <<FK>>
-    checked_in_by   : BIGINT <<FK>>
     is_offline      : BOOLEAN
     device_id       : VARCHAR(255)
     client_timestamp: TIMESTAMP
