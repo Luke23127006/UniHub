@@ -43,7 +43,7 @@ API public dùng để hiển thị lịch trình sự kiện trên Web/App.
       "endTime": "2024-05-20T10:00:00Z",
       "room": {
         "name": "Hội trường A",
-        "mapUrl": "[https://unihub.com/maps/hall-a.png](https://unihub.com/maps/hall-a.png)"
+        "mapUrl": "https://unihub.com/maps/hall-a.png"
       },
       "pricing": {
         "isFree": true,
