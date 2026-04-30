@@ -16,6 +16,18 @@ services:
     networks:
       - unihub_network
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: unihub_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@unihub.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - unihub_network
+
   redis:
     image: redis:7-alpine
     container_name: unihub_redis
@@ -24,6 +36,17 @@ services:
       - "${REDIS_PORT}:6379"
     volumes:
       - unihub_redis_data:/data
+    networks:
+      - unihub_network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: unihub_redis_commander
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
     networks:
       - unihub_network
 
