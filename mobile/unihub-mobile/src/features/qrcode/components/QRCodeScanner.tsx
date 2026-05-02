@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS } from 'react-native-reanimated';
+import { runOnJS } from 'react-native-reanimated';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { QRBoundingBox } from '@/components/ui/QRBoundingBox';
@@ -14,7 +14,7 @@ export default function QRCodeScanner() {
   const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
   const [isScanning, setIsScanning] = useState(true);
   const [zoom, setZoom] = useState(0); // Standard state for zoom
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -28,6 +28,7 @@ export default function QRCodeScanner() {
     if (result.data) {
       setScannedData(result.data);
       setBounds(result.bounds);
+      setIsScanning(false);
 
       // Reset auto-hide timer
       if (timeoutRef.current) clearTimeout(timeoutRef.current);

@@ -1,4 +1,4 @@
-import { QRCodeData, ScanResult } from './types';
+import { ScanResult } from './types';
 
 export const validateQRCode = async (data: string): Promise<ScanResult> => {
   // Skeleton implementation
