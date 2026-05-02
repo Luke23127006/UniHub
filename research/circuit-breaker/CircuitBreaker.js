@@ -1,5 +1,4 @@
 // CircuitBreaker.js
-const axios = require('axios');
 
 class CircuitBreaker {
     constructor(requestFunction, options = {}) {
