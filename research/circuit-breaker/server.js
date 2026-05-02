@@ -20,8 +20,20 @@ app.post('/api/mock-payment', (req, res) => {
 
 // Endpoint phụ để bạn thay đổi trạng thái của cổng thanh toán khi test
 app.post('/api/toggle-payment-gateway', (req, res) => {
-    isPaymentGatewayDown = !isPaymentGatewayDown;
-    res.json({ message: `Cổng thanh toán hiện tại đang: ${isPaymentGatewayDown ? 'LỖI (DOWN)' : 'BÌNH THƯỜNG (UP)'}` });
+    const { state } = req.query;
+
+    if (state !== 'up' && state !== 'down') {
+        return res.status(400).json({
+            error: 'Invalid state',
+            message: 'Vui lòng truyền ?state=up hoặc ?state=down'
+        });
+    }
+
+    isPaymentGatewayDown = state === 'down';
+    return res.json({
+        message: `Cổng thanh toán hiện tại đang: ${isPaymentGatewayDown ? 'LỖI (DOWN)' : 'BÌNH THƯỜNG (UP)'}`,
+        state: isPaymentGatewayDown ? 'down' : 'up'
+    });
 });
 
 // ==========================================
