@@ -1,4 +1,4 @@
-import ExploreScreen from '@/features/explore/components/ExploreScreen';
+import ExploreScreen from '@/features/explore';
 
 export default function Explore() {
   return <ExploreScreen />;
