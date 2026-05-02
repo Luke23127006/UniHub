@@ -82,17 +82,17 @@ Nếu không trùng khớp, đánh chặn và trả về 403 Forbidden hoặc 40
 
 Dưới đây là bảng đặc tả quy định Role nào được gọi Endpoint nào. Các Endpoint không có trong bảng này được xem là Public (Ai cũng gọi được, ví dụ: Login, Xem danh sách workshop đang mở).
 
-| Endpoint                          | Method     | Chức năng                           | Role được phép |
-| --------------------------------- | ---------- | ----------------------------------- | -------------- |
-| /api/v1/workshops                 | GET        | Xem danh sách workshop              | Public         |
-| /api/v1/workshops                 | POST       | Tạo workshop mới                    | Admin          |
-| /api/v1/workshops/:id             | GET        | Xem chi tiết + AI Summary           | Public         |
-| /api/v1/workshops/:id             | PUT/DELETE | Sửa/Hủy workshop                    | Admin          |
-| /api/v1/workshops/:id/pdf-summary | POST       | Tóm tắt file PDF bằng AI            | Admin          |
-| /api/v1/students/import           | POST       | Import CSV dữ liệu sinh viên        | Admin          |
-| /api/v1/tickets/register          | POST       | Đăng ký / Giữ chỗ (Mua vé)          | Student        |
-| /api/v1/tickets/my-tickets        | GET        | Xem danh sách vé của tôi            | Student        |
-| /api/v1/tickets/:id/qr            | GET        | Lấy mã QR check-in                  | Student        |
-| /api/v1/checkin/scan              | POST       | Quét QR ghi nhận check-in           | Staff          |
-| /api/v1/checkin/sync              | POST       | Đồng bộ dữ liệu check-in offline    | Staff          |
-| /api/v1/workshops/:id/stats       | GET        | Xem thống kê số lượng vé / check-in | Admin, Staff   |
+| Endpoint                     | Method     | Chức năng                           | Role được phép |
+| ---------------------------- | ---------- | ----------------------------------- | -------------- |
+| /v1/workshops                | GET        | Xem danh sách workshop              | Public         |
+| /v1/workshops                | POST       | Tạo workshop mới                    | Admin          |
+| /v1/workshops/:id            | GET        | Xem chi tiết + AI Summary           | Public         |
+| /v1/workshops/:id            | PUT/DELETE | Sửa/Hủy workshop                    | Admin          |
+| /v1/workshops/:id/pdf-summary| POST       | Tóm tắt file PDF bằng AI            | Admin          |
+| /v1/students/import          | POST       | Import CSV dữ liệu sinh viên        | Admin          |
+| /v1/tickets/register         | POST       | Đăng ký / Giữ chỗ (Mua vé)          | Student        |
+| /v1/tickets/my-tickets       | GET        | Xem danh sách vé của tôi            | Student        |
+| /v1/tickets/:id/qr           | GET        | Lấy mã QR check-in                  | Student        |
+| /v1/checkin/scan             | POST       | Quét QR ghi nhận check-in           | Staff          |
+| /v1/checkin/sync             | POST       | Đồng bộ dữ liệu check-in offline    | Staff          |
+| /v1/workshops/:id/stats      | GET        | Xem thống kê số lượng vé / check-in | Admin, Staff   |
