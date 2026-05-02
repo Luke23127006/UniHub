@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import fitz  # PyMuPDF
@@ -5,6 +6,9 @@ import google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 # Tải cấu hình từ file .env (nếu có)
 load_dotenv()
@@ -79,12 +83,13 @@ async def summarize_pdf(file: UploadFile = File(...)):
             }
         )
 
-    except Exception as e:
-        # Bắt các lỗi trong quá trình xử lý (Lỗi AI, lỗi đọc file...)
-        print(f"Error processing PDF: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error processing PDF: %s", file.filename)
         raise HTTPException(
-            status_code=500, 
-            detail=f"Đã xảy ra lỗi trong quá trình xử lý: {str(e)}"
+            status_code=500,
+            detail="Đã xảy ra lỗi trong quá trình xử lý file."
         )
 
 if __name__ == "__main__":
