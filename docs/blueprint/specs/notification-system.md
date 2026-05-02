@@ -4,7 +4,7 @@
 Tính năng "Hệ thống gửi Thông báo" đóng vai trò như một module dịch vụ dùng chung (Shared Service) chịu trách nhiệm gửi các luồng thông tin giao tiếp quan trọng đến sinh viên (ví dụ: email xác nhận đăng ký, mã QR check-in, thông báo dời lịch hoặc hủy workshop). Nhằm tránh làm tắc nghẽn luồng xử lý chính của người dùng, module này được kiến trúc theo mô hình hướng sự kiện (Event-Driven Architecture), nơi toàn bộ quá trình giao tiếp với bên thứ 3 (Email/Push) đều được đưa vào Message Queue (RabbitMQ) và xử lý bất đồng bộ (Asynchronous).
 
 ## Luồng chính
-1. Khi các tính năng nghiệp vụ lõi (UC02 - Đăng ký, UC03 - Quản lý) hoàn thành một thao tác, hệ thống sẽ phát (Publish) một sự kiện vào RabbitMQ (Ví dụ: `ticket.registered`, `workshop.cancelled`).
+1. Khi các tính năng nghiệp vụ lõi (UC02 - Đăng ký, UC03 - Quản lý) hoàn thành một thao tác, hệ thống sẽ phát (Publish) một sự kiện vào RabbitMQ (Ví dụ: `ticket.created.event`, `workshop.updated.event`).
 2. Message Queue (RabbitMQ) tiếp nhận, lưu trữ an toàn các sự kiện này vào hàng đợi (Queue) thích hợp.
 3. Các tiến trình Background Worker (Consumer) liên tục lắng nghe hàng đợi để kéo (pull) tin nhắn ra xử lý.
 4. Dựa trên loại sự kiện, Worker trích xuất dữ liệu, lắp ráp vào các mẫu nội dung (Templates) đã được chuẩn bị sẵn (như mẫu Email HTML có chèn mã QR, hoặc Payload JSON cho Push Notification).
