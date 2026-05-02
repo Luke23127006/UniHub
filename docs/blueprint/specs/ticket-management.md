@@ -5,7 +5,7 @@ Tính năng "Quản lý vé & QR Code" (thuộc phạm vi của UC02) cho phép 
 
 ## Luồng chính
 1. Sinh viên mở ứng dụng (Web hoặc React Native App) và điều hướng đến mục "Vé của tôi" (My Tickets).
-2. Client gửi yêu cầu (`GET /api/v1/tickets/my-tickets`) lên Backend (Node.js) đính kèm Access Token trên Header.
+2. Client gửi yêu cầu (`GET /v1/tickets/my-tickets`) lên Backend (Node.js) đính kèm Access Token trên Header.
 3. Backend xác thực Access Token, trích xuất `student_id` và truy vấn PostgreSQL để lấy danh sách các vé của sinh viên, được sắp xếp theo thời gian sự kiện mới nhất.
 4. Backend trả về danh sách vé với các trạng thái phân loại rõ ràng (ví dụ: Sắp diễn ra, Đã tham gia, Đã hủy).
 5. Sinh viên chọn một vé thuộc nhóm "Sắp diễn ra" để xem chi tiết.
