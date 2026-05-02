@@ -17,9 +17,11 @@
  * sau 5 giây để không làm hệ thống bị kẹt vĩnh viễn (Deadlock).
  *
  * * 2. VÙNG AN TOÀN (Critical Section):
- * - Chỉ người cầm khóa mới lọt được vào khối `try {}` này. Tại đây, code có thể
- * thong thả kiểm tra số vé hiện tại, trừ đi 1 vé và lưu vào DB một cách an toàn
- * tuyệt đối mà không sợ bất kỳ request nào khác xen ngang phá bĩnh.
+ * - Chỉ người cầm khóa mới lọt được vào khối `try {}` này. Trong thời gian lock
+ * còn hiệu lực, code có thể kiểm tra số vé hiện tại, trừ đi 1 vé và lưu vào DB
+ * mà không bị request khác xen ngang. Tuy nhiên, đây không phải an toàn tuyệt
+ * đối: nếu xử lý kéo dài quá TTL 5 giây thì lock có thể hết hạn trước khi xử lý
+ * xong và request khác vẫn có thể lấy lock để đi tiếp.
  *
  * * 3. TRẢ KHÓA (Release Lock - Khối finally {}):
  * - Bắt buộc phải có `finally {}` để đảm bảo: Dù người đó mua thành công, mua
@@ -32,7 +34,9 @@ const express = require("express");
 const Redis = require("ioredis");
 
 const app = express();
-const redis = new Redis({ host: "localhost", port: 6379 });
+const REDIS_HOST = process.env.REDIS_HOST || "localhost";
+const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
+const redis = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
 
 app.use(express.json());
 
@@ -68,7 +72,7 @@ app.post("/buy-ticket", async (req, res) => {
     // 2. Critical Section
     const availableTickets = await redis.get(TICKET_KEY);
 
-    if (parseInt(availableTickets) > 0) {
+    if (parseInt(availableTickets, 10) > 0) {
       // Simulate server taking 50ms to process DB operations
       await new Promise((resolve) => setTimeout(resolve, 50));
 
