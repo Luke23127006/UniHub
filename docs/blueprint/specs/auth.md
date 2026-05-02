@@ -18,7 +18,7 @@ Tính năng cho phép người dùng (Sinh viên, Ban tổ chức, Nhân sự ch
 
 ## Kịch bản lỗi
 - **Sai thông tin đăng nhập**: Nếu email hoặc mật khẩu không khớp, hệ thống từ chối xác thực, trả về lỗi HTTP 401 Unauthorized kèm yêu cầu nhập lại.
-- **Tài khoản không tồn tại**: Nếu hệ thống không tìm thấy dữ liệu người dùng (ví dụ: Sinh viên chưa được đồng bộ từ file CSV vào hệ thống), hệ thống trả về lỗi HTTP 404 Not Found (hoặc 401) kèm hướng dẫn liên hệ bộ phận hỗ trợ.
+- **Tài khoản không tồn tại**: Nếu hệ thống không tìm thấy dữ liệu người dùng (ví dụ: Sinh viên chưa được đồng bộ từ file CSV vào hệ thống), hệ thống trả về lỗi HTTP 401 Unauthorized kèm hướng dẫn liên hệ bộ phận hỗ trợ.
 - **Lỗi dịch vụ SSO**: Nếu hệ thống SSO của trường bị lỗi, timeout hoặc không phản hồi, hệ thống thông báo bảo trì tạm thời đối với tính năng đăng nhập SSO (HTTP 502/503/504) và gợi ý thử lại sau.
 - **Tài khoản bị khóa/vô hiệu hóa**: Nếu trạng thái tài khoản không được phép đăng nhập, hệ thống từ chối cấp token và trả về lỗi HTTP 403 Forbidden.
 
