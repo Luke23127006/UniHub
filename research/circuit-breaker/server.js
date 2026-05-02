@@ -50,7 +50,7 @@ app.post('/checkout', async (req, res) => {
         // Trả về lỗi thân thiện cho user / App
         res.status(500).json({
             message: 'Thanh toán thất bại.',
-            reason: error.message || error.response?.data?.message || 'Lỗi không xác định'
+            reason: error.response?.data?.message || error.message || 'Lỗi không xác định'
         });
     }
 });
