@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -14,7 +14,6 @@ export default function QRCodeScanner() {
   const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
   const [isScanning, setIsScanning] = useState(true);
   const [zoom, setZoom] = useState(0); // Standard state for zoom
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -28,14 +27,10 @@ export default function QRCodeScanner() {
     if (result.data) {
       setScannedData(result.data);
       setBounds(result.bounds);
-      setIsScanning(false);
+      setIsScanning(false); // Pause scanning until user taps "Scan Again"
 
-      // Reset auto-hide timer
+      // Clear any pending auto-hide timer
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => {
-        setScannedData(null);
-        setBounds(null);
-      }, 500); // Hide box if not detected for 500ms
     }
   };
 
@@ -100,7 +95,11 @@ export default function QRCodeScanner() {
           {!isScanning && (
             <TouchableOpacity
               style={styles.rescanButton}
-              onPress={() => setIsScanning(true)}
+              onPress={() => {
+                setScannedData(null);
+                setBounds(null);
+                setIsScanning(true);
+              }}
             >
               <IconSymbol name="qrcode.viewfinder" size={24} color="#FFF" />
               <Text style={styles.rescanText}>Tap to Scan Again</Text>
