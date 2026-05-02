@@ -88,6 +88,14 @@ app.post("/buy-ticket", async (req, res) => {
     // 2. Critical Section
     const availableTickets = await redis.get(TICKET_KEY);
 
+    if (availableTickets === null) {
+      console.log(`⚠️ [${userId}] Ticket inventory is not initialized!`);
+      return res.status(503).json({
+        error: "Ticket inventory is not initialized. Please reset the system first!",
+        userId,
+      });
+    }
+
     if (parseInt(availableTickets, 10) > 0) {
       // Simulate server taking 50ms to process DB operations
       await new Promise((resolve) => setTimeout(resolve, 50));
