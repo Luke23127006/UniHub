@@ -14,7 +14,7 @@ Tính năng "Quản lý vé & QR Code" (thuộc phạm vi của UC02) cho phép 
 8. Tại cổng sự kiện, sinh viên đưa mã QR này cho nhân sự (Staff) quét. Trên Mobile App, độ sáng màn hình có thể tự động tăng tối đa để máy quét dễ nhận diện.
 
 ## Kịch bản lỗi
-- **Truy cập trái phép (Lỗi IDOR)**: Nếu một người dùng cố tình thay đổi tham số ID để xem vé của người khác (`GET /api/v1/tickets/:id`), Backend sẽ đối chiếu `ticket.student_id` với `req.user.sub` trong Token. Nếu không khớp, hệ thống chặn ngay lập tức và trả về lỗi HTTP 403 Forbidden.
+- **Truy cập trái phép (Lỗi IDOR)**: Nếu một người dùng cố tình thay đổi tham số ID để lấy mã QR của vé thuộc về người khác (`GET /api/v1/tickets/:id/qr`), Backend sẽ đối chiếu `ticket.student_id` với `req.user.sub` trong Token. Nếu không khớp, hệ thống chặn ngay lập tức và trả về lỗi HTTP 403 Forbidden. Nếu hệ thống có endpoint xem chi tiết vé tách biệt với endpoint lấy QR, endpoint đó cần được đặc tả riêng; ví dụ trong tài liệu này đang áp dụng cho API lấy QR.
 - **Mất mạng khi xem vé (Đặc thù Mobile App)**: Nếu sinh viên không có 4G/Wifi tại địa điểm sự kiện (hội trường sóng yếu), ứng dụng React Native sẽ tự động Fallback lấy dữ liệu vé và mã QR từ bộ nhớ đệm cục bộ (AsyncStorage/SQLite) để hiển thị chế độ Offline.
 - **Lấy ảnh QR thất bại**: Nếu không load được ảnh QR từ máy chủ Storage (do lỗi mạng hoặc Storage sập), ứng dụng sẽ tự động sinh mã QR trực tiếp tại Client-side (sử dụng thư viện vẽ Canvas/SVG) dựa trên chuỗi mã định danh dạng text trả về từ Backend.
 - **Vé không hợp lệ**: Nếu sinh viên mở một vé đã bị Ban tổ chức hủy hoặc sự kiện đã kết thúc, mã QR sẽ bị làm mờ (dimmed) hoặc bị đóng dấu watermark "Đã hết hạn/Đã hủy" để tránh nhầm lẫn.
