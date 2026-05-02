@@ -12,7 +12,7 @@ Tính năng "Quét mã QR" là công cụ vận hành cốt lõi dành riêng ch
 4. **Ghi nhận Check-in (Offline)**:
    - Nếu mã hợp lệ và vé chưa được quét, App lập tức cập nhật trạng thái vé thành "Đã check-in" trong Local DB. Màn hình nháy sáng màu xanh lá cây kèm hiệu ứng âm thanh "Tít" thành công.
    - App đưa sự kiện check-in này vào một hàng đợi đồng bộ (Sync Queue) nội bộ.
-5. **Đồng bộ tự động (Auto-sync)**: Một tiến trình chạy ngầm (Background Task) trong App liên tục lắng nghe trạng thái kết nối mạng (NetInfo). Ngay khi phát hiện có Internet, App sẽ đóng gói toàn bộ danh sách trong Sync Queue thành một mảng (batch) và gọi API `POST /api/v1/checkin/sync` đẩy lên Backend (Node.js) để chốt dữ liệu vào PostgreSQL, sau đó dọn dẹp hàng đợi.
+5. **Đồng bộ tự động (Auto-sync)**: Một tiến trình chạy ngầm (Background Task) trong App liên tục lắng nghe trạng thái kết nối mạng (NetInfo). Ngay khi phát hiện có Internet, App sẽ đóng gói toàn bộ danh sách trong Sync Queue thành một mảng (batch) và gọi API `POST /v1/checkin/sync` đẩy lên Backend (Node.js) để chốt dữ liệu vào PostgreSQL, sau đó dọn dẹp hàng đợi.
 
 ## Kịch bản lỗi
 - **Vé giả mạo / Không tồn tại**: Nếu giải mã QR ra một ID vé không nằm trong danh sách sự kiện hiện tại của Local DB (hoặc sai chữ ký mã hóa), App lập tức hiển thị màn hình đỏ kèm âm thanh bíp cảnh báo (Lỗi vé không hợp lệ/Sai sự kiện).
