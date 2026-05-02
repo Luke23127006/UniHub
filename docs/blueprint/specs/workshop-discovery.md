@@ -5,7 +5,7 @@ Tính năng "Khám phá Workshop" cho phép sinh viên xem lịch và danh sách
 
 ## Luồng chính
 1. Sinh viên truy cập vào ứng dụng (Web hoặc React Native App) và chuyển đến màn hình "Danh sách Workshop".
-2. Client gửi request (GET `/api/v1/workshops`) lên Backend (Node.js) để lấy danh sách sự kiện.
+2. Client gửi request (GET `/v1/workshops`) lên Backend (Node.js) để lấy danh sách sự kiện.
 3. Backend ưu tiên kiểm tra bộ nhớ đệm (Redis Cache). Nếu có dữ liệu hợp lệ, trả về ngay lập tức; nếu chưa có, truy vấn PostgreSQL, lưu vào Redis và trả về cho Client.
 4. Client hiển thị danh sách workshop với các thông tin cơ bản: Tên sự kiện, thời gian, diễn giả, phòng tổ chức.
 5. Client thiết lập cơ chế cập nhật liên tục (như SSE, WebSocket hoặc Short Polling) để hiển thị số lượng chỗ trống còn lại theo thời gian thực (real-time).
