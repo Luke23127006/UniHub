@@ -13,10 +13,18 @@ logger = logging.getLogger(__name__)
 # Tải cấu hình từ file .env (nếu có)
 load_dotenv()
 
-# Cấu hình Google Gemini API
-# Lưu ý: Bạn cần thiết lập biến môi trường GOOGLE_API_KEY
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Gemini client is initialised lazily when the AI path is first used.
+_gemini_model = None
+
+def _get_gemini_model():
+    global _gemini_model
+    if _gemini_model is None:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
+        genai.configure(api_key=api_key)
+        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+    return _gemini_model
 
 app = FastAPI(title="UniHub Workshop PDF Summarizer")
 
@@ -71,7 +79,7 @@ async def summarize_pdf(file: UploadFile = File(...)):
         # """
 
         # Gọi Google Gemini API
-        # response = model.generate_content(prompt)
+        # response = _get_gemini_model().generate_content(prompt)
         # summary = response.text
 
         # 5. Trả kết quả (Trả về raw text đã parse)
