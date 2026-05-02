@@ -48,7 +48,7 @@ app.use(express.json());
 const WORKSHOP_ID = "workshop_123";
 const TICKET_KEY = `tickets:${WORKSHOP_ID}`;
 const LOCK_KEY = `lock:${WORKSHOP_ID}`;
-const LOCK_TTL_MS = Number(process.env.LOCK_TTL_MS || 5000);
+const LOCK_TTL_MS = parseInt(process.env.LOCK_TTL_MS, 10) || 5000;
 
 // Lua script: atomically delete the lock only if its value matches the token
 const RELEASE_LOCK_SCRIPT = `
