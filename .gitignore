@@ -1,4 +1,3 @@
 .env
-redis-lock/node_modules
+research/redis-lock/node_modules
 research/circuit-breaker/node_modules
-research/lock/node_modules
