@@ -5,7 +5,7 @@ Tính năng "Dashboard Thống kê" là trung tâm báo cáo trên nền tảng 
 
 ## Luồng chính
 1. Admin đăng nhập thành công vào hệ thống Web Admin và truy cập vào menu "Dashboard".
-2. Client (Web) gửi API Request (`GET /api/v1/analytics/overview`) để lấy dữ liệu tổng hợp.
+2. Client (Web) gửi API Request (`GET /v1/analytics/overview`) để lấy dữ liệu tổng hợp.
 3. Backend (Node.js) nhận request và ưu tiên đọc dữ liệu báo cáo đã được tính toán sẵn từ bộ nhớ đệm (Redis Cache).
 4. Nếu dữ liệu trong Redis không có (Cache Miss), Backend truy xuất dữ liệu từ các Materialized Views của PostgreSQL (các view này đã được group và sum sẵn số liệu).
 5. Backend trả về dữ liệu định dạng JSON bao gồm: chuỗi thời gian (time-series) cho biểu đồ và con số tổng (metrics) cho các thẻ (Cards).
