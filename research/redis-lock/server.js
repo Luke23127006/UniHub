@@ -12,15 +12,16 @@
  * "Chỉ tạo cái khóa này nếu nó CHƯA TỒN TẠI". Nghĩa là trong 100 người lao vào,
  * chỉ có ĐÚNG 1 NGƯỜI tạo được khóa và đi tiếp. 99 người kia sẽ nhận kết quả `null`
  * và bị văng ra (trả về lỗi 429 - Hệ thống đang bận).
- * - "PX 5000" (Auto Expiry): Tự động hủy khóa sau 5 giây. Đề phòng trường hợp
+ * - "PX <TTL>" (Auto Expiry): Tự động hủy khóa sau khoảng thời gian TTL (mặc định 5 giây,
+ * cấu hình qua biến môi trường LOCK_TTL_MS). Đề phòng trường hợp
  * người giữ khóa đang xử lý thì bị sập server/mất mạng, khóa vẫn sẽ tự nhả ra
- * sau 5 giây để không làm hệ thống bị kẹt vĩnh viễn (Deadlock).
+ * sau TTL để không làm hệ thống bị kẹt vĩnh viễn (Deadlock).
  *
  * * 2. VÙNG AN TOÀN (Critical Section):
  * - Chỉ người cầm khóa mới lọt được vào khối `try {}` này. Trong thời gian lock
  * còn hiệu lực, code có thể kiểm tra số vé hiện tại, trừ đi 1 vé và lưu vào DB
  * mà không bị request khác xen ngang. Tuy nhiên, đây không phải an toàn tuyệt
- * đối: nếu xử lý kéo dài quá TTL 5 giây thì lock có thể hết hạn trước khi xử lý
+ * đối: nếu xử lý kéo dài quá TTL thì lock có thể hết hạn trước khi xử lý
  * xong và request khác vẫn có thể lấy lock để đi tiếp.
  *
  * * 3. TRẢ KHÓA (Release Lock - Khối finally {}):
@@ -47,6 +48,7 @@ app.use(express.json());
 const WORKSHOP_ID = "workshop_123";
 const TICKET_KEY = `tickets:${WORKSHOP_ID}`;
 const LOCK_KEY = `lock:${WORKSHOP_ID}`;
+const LOCK_TTL_MS = Number(process.env.LOCK_TTL_MS || 5000);
 
 // Lua script: atomically delete the lock only if its value matches the token
 const RELEASE_LOCK_SCRIPT = `
@@ -74,8 +76,8 @@ app.post("/buy-ticket", async (req, res) => {
   // Use a unique token per acquire so we can safely verify ownership on release
   const lockToken = crypto.randomUUID();
 
-  // 1. Attempt to acquire the lock (Lock expires in 5 seconds)
-  const isLocked = await redis.set(LOCK_KEY, lockToken, "NX", "PX", 5000);
+  // 1. Attempt to acquire the lock (Lock expires after LOCK_TTL_MS milliseconds)
+  const isLocked = await redis.set(LOCK_KEY, lockToken, "NX", "PX", LOCK_TTL_MS);
 
   if (!isLocked) {
     return res.status(429).json({
