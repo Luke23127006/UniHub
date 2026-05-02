@@ -1,7 +1,7 @@
 # Đặc tả: Quản lý Workshop (CRUD)
 
 ## Mô tả
-Tính năng "Quản lý Workshop" (UC03) cung cấp giao diện Dashboard nội bộ (Web) dành riêng cho Ban tổ chức (Admin) để thực hiện các thao tác thao tác vòng đời dữ liệu (Tạo mới, Đọc, Cập nhật, Xóa/Hủy) đối với các sự kiện. Tính năng này đóng vai trò quyết định dữ liệu hiển thị trên ứng dụng của sinh viên. Do tác động trực tiếp đến dữ liệu lõi, chức năng này yêu cầu các ràng buộc khắt khe về nghiệp vụ (như chống trùng lịch, trùng phòng), cơ chế tự động dọn dẹp bộ nhớ đệm (Cache Invalidation) và tự động gửi thông báo (Notification) để xử lý khủng hoảng truyền thông khi có thay đổi quan trọng.
+Tính năng "Quản lý Workshop" (UC03) cung cấp giao diện Dashboard nội bộ (Web) dành riêng cho Ban tổ chức (Admin) để thực hiện các thao tác vòng đời dữ liệu (Tạo mới, Đọc, Cập nhật, Xóa/Hủy) đối với các sự kiện. Tính năng này đóng vai trò quyết định dữ liệu hiển thị trên ứng dụng của sinh viên. Do tác động trực tiếp đến dữ liệu lõi, chức năng này yêu cầu các ràng buộc khắt khe về nghiệp vụ (như chống trùng lịch, trùng phòng), cơ chế tự động dọn dẹp bộ nhớ đệm (Cache Invalidation) và tự động gửi thông báo (Notification) để xử lý khủng hoảng truyền thông khi có thay đổi quan trọng.
 
 ## Luồng chính
 1. Ban tổ chức (Admin) truy cập trang Web Dashboard nội bộ và đăng nhập bằng tài khoản quản trị.
