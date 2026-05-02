@@ -1,4 +1,4 @@
-import QRCodeScanner from '@/features/qrcode/components/QRCodeScanner';
+import QRCodeScanner from '@/features/qrcode';
 
 export default function QRScreen() {
   return <QRCodeScanner />;
