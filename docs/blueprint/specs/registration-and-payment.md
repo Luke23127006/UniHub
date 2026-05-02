@@ -12,7 +12,7 @@ Tính năng "Đăng ký & Thanh toán" là module cốt lõi của hệ thống 
    - **Miễn phí (Free)**: Hệ thống lập tức chuyển trạng thái Ticket sang `CONFIRMED`.
    - **Có phí (Paid)**: Hệ thống khởi tạo phiên giao dịch, điều hướng Client sang cổng thanh toán (Mock). Sinh viên thực hiện nhập thông tin và xác nhận.
 6. Khi thanh toán trả về kết quả thành công, Backend cập nhật trạng thái Ticket sang `CONFIRMED` và Payment sang `SUCCESS`.
-7. Backend đẩy một Message (Event: `ticket.created.event`) vào RabbitMQ.
+7. Backend đẩy một Message (Event: `ticket.created`) vào RabbitMQ.
 8. Các Consumer worker chạy ngầm sẽ nhận Message từ RabbitMQ để thực hiện các tác vụ nặng:
    - Khởi tạo mã QR Code check-in và lưu đường dẫn vào database.
    - Gọi sang dịch vụ Notification (UC08) để gửi email xác nhận đính kèm vé điện tử cho sinh viên.
