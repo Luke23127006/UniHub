@@ -7,8 +7,8 @@ Tính năng "Quản lý Workshop" (UC03) cung cấp giao diện Dashboard nội 
 1. Ban tổ chức (Admin) truy cập trang Web Dashboard nội bộ và đăng nhập bằng tài khoản quản trị.
 2. Admin điều hướng đến trang "Quản lý sự kiện" và chọn thực hiện thao tác: Tạo mới sự kiện, hoặc Chỉnh sửa một sự kiện đang có.
 3. Admin điền các thông tin mô tả sự kiện: Tên, Mô tả, Thời gian bắt đầu/kết thúc, Diễn giả, Số lượng ghế tối đa, Giá vé (nếu có).
-4. Admin tải lên các tệp đính kèm (File PDF giới thiệu, Ảnh minh họa, Ảnh sơ đồ phòng). Client gọi API Upload (`POST /api/v1/upload`) để đẩy file thẳng lên Cloud Storage (ví dụ: AWS S3) và nhận lại URL.
-5. Client gửi toàn bộ Payload (bao gồm cả các URL file vừa nhận) lên Backend (Node.js) qua API `POST` hoặc `PUT /api/v1/workshops`.
+4. Admin tải lên các tệp đính kèm (File PDF giới thiệu, Ảnh minh họa, Ảnh sơ đồ phòng). Client gọi API Upload (`POST /v1/upload`) để đẩy file thẳng lên Cloud Storage (ví dụ: AWS S3) và nhận lại URL.
+5. Client gửi toàn bộ Payload (bao gồm cả các URL file vừa nhận) lên Backend (Node.js) qua API `POST /v1/workshops` để tạo mới, hoặc `PUT /v1/workshops/:id` để cập nhật workshop hiện có.
 6. Backend tiếp nhận và thực hiện Validation nghiệp vụ:
    - Kiểm tra ràng buộc không gian và thời gian để đảm bảo không có hai sự kiện nào diễn ra cùng một phòng trong cùng một khung giờ.
 7. Nếu dữ liệu hợp lệ, Backend lưu thông tin vào cơ sở dữ liệu PostgreSQL.
