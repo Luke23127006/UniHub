@@ -25,11 +25,15 @@
  *
  * * 3. TRẢ KHÓA (Release Lock - Khối finally {}):
  * - Bắt buộc phải có `finally {}` để đảm bảo: Dù người đó mua thành công, mua
- * thất bại (do hết vé), hay code bị lỗi văng exception, thì lệnh `redis.del(LOCK_KEY)`
- * vẫn luôn được gọi để trả lại chìa khóa cho những người đang đứng đợi.
+ * thất bại (do hết vé), hay code bị lỗi văng exception, thì khoá vẫn luôn được
+ * trả lại cho những người đang đứng đợi.
+ * - Khoá được giải phóng bằng Lua script (compare-and-delete): chỉ xoá khoá nếu
+ * giá trị của nó khớp với token duy nhất được tạo lúc acquire. Điều này tránh việc
+ * vô tình xoá khoá đã được acquire bởi một request khác khi TTL hết hạn.
  * ============================================================================
  */
 
+const crypto = require("crypto");
 const express = require("express");
 const Redis = require("ioredis");
 
@@ -43,6 +47,15 @@ app.use(express.json());
 const WORKSHOP_ID = "workshop_123";
 const TICKET_KEY = `tickets:${WORKSHOP_ID}`;
 const LOCK_KEY = `lock:${WORKSHOP_ID}`;
+
+// Lua script: atomically delete the lock only if its value matches the token
+const RELEASE_LOCK_SCRIPT = `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+  else
+    return 0
+  end
+`;
 
 // API 1: Reset data for testing (Set ticket count = 1)
 app.post("/reset", async (req, res) => {
@@ -58,8 +71,11 @@ app.post("/buy-ticket", async (req, res) => {
   // Generate a random ID to simulate different users
   const userId = req.body?.userId || `User_${Math.floor(Math.random() * 1000)}`;
 
+  // Use a unique token per acquire so we can safely verify ownership on release
+  const lockToken = crypto.randomUUID();
+
   // 1. Attempt to acquire the lock (Lock expires in 5 seconds)
-  const isLocked = await redis.set(LOCK_KEY, userId, "NX", "PX", 5000);
+  const isLocked = await redis.set(LOCK_KEY, lockToken, "NX", "PX", 5000);
 
   if (!isLocked) {
     return res.status(429).json({
@@ -92,8 +108,8 @@ app.post("/buy-ticket", async (req, res) => {
       });
     }
   } finally {
-    // 3. Release the lock when done
-    await redis.del(LOCK_KEY);
+    // 3. Release the lock only if we still own it (compare-and-delete via Lua)
+    await redis.eval(RELEASE_LOCK_SCRIPT, 1, LOCK_KEY, lockToken);
   }
 });
 
