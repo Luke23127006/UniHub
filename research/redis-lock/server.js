@@ -109,7 +109,15 @@ app.post("/buy-ticket", async (req, res) => {
     }
   } finally {
     // 3. Release the lock only if we still own it (compare-and-delete via Lua)
-    await redis.eval(RELEASE_LOCK_SCRIPT, 1, LOCK_KEY, lockToken);
+    try {
+      await redis.eval(RELEASE_LOCK_SCRIPT, 1, LOCK_KEY, lockToken);
+    } catch (error) {
+      console.error("Failed to release Redis lock:", {
+        lockKey: LOCK_KEY,
+        lockToken,
+        error: error.message,
+      });
+    }
   }
 });
 
