@@ -17,7 +17,7 @@ services:
       - unihub_network
 
   pgadmin:
-    image: dpage/pgadmin4:8.10
+    image: dpage/pgadmin4:9.14
     container_name: unihub_pgadmin
     restart: always
     environment:
@@ -40,7 +40,7 @@ services:
       - unihub_network
 
   redis-commander:
-    image: rediscommander/redis-commander:0.8.0
+    image: rediscommander/redis-commander:latest
     container_name: unihub_redis_commander
     restart: always
     environment:

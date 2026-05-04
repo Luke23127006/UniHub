@@ -111,3 +111,4 @@ dist
 
 # Mac OS
 .DS_Store
+/src/generated/prisma
