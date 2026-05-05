@@ -11,7 +11,7 @@ async function healthCheck(req, res) {
     await prisma.$queryRaw`SELECT 1`;
   } catch (err) {
     result.db = 'DOWN';
-    result.db_error = err.message;
+    console.error('Health check database probe failed:', err);
     return res.status(503).json(result);
   }
 
