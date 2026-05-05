@@ -1,4 +1,8 @@
 .env
+
+# Research sandboxes
 research/redis-lock/node_modules
 research/circuit-breaker/node_modules
-.claude
+
+# Claude Code — local settings contain machine-specific paths and permissions
+.claude/settings.local.json
