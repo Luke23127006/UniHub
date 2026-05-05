@@ -61,7 +61,7 @@ export default function WorkshopListView({ workshops }) {
         {workshops.map((w) => (
           <li
             key={w.id}
-            className="group flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_auto_auto] md:items-center gap-3 md:gap-4 px-5 py-4 bg-unihub-card dark:bg-gray-800 hover:bg-unihub-bg dark:hover:bg-gray-750 transition-colors"
+            className="group flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_auto_auto] md:items-center gap-3 md:gap-4 px-5 py-4 bg-unihub-card dark:bg-gray-800 hover:bg-unihub-bg dark:hover:bg-gray-700 transition-colors"
           >
             {/* Title + speaker */}
             <div className="min-w-0">

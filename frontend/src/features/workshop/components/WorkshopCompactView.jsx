@@ -36,7 +36,7 @@ export default function WorkshopCompactView({ workshops }) {
       {workshops.map((w) => (
         <li
           key={w.id}
-          className="flex items-center gap-3 px-4 py-2.5 bg-unihub-card dark:bg-gray-800 hover:bg-unihub-bg dark:hover:bg-gray-750 transition-colors"
+          className="flex items-center gap-3 px-4 py-2.5 bg-unihub-card dark:bg-gray-800 hover:bg-unihub-bg dark:hover:bg-gray-700 transition-colors"
         >
           {/* Status dot */}
           <span
