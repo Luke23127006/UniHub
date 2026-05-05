@@ -4,5 +4,5 @@
 research/redis-lock/node_modules
 research/circuit-breaker/node_modules
 
-# Claude Code — local settings contain machine-specific paths and permissions
-.claude/settings.local.json
+# Claude Code — entire folder is machine-specific
+.claude/
