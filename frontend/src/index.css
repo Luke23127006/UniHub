@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Root background follows the active theme so the page never shows a flash
+   of white outside the React tree (e.g. scrolled past content). */
+html {
+  background-color: #f9f7f1; /* unihub-bg — university theme default */
+}
+
+html.dark {
+  background-color: #1a1a1a;
+}
