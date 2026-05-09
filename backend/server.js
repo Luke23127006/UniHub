@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const prisma = require('./src/config/db');
 const routes = require('./src/routes');
+const { connectRabbitMQ, closeRabbitMQ } = require('./src/config/rabbitmq');
+const { startRegistrationWorker } = require('./src/jobs/registrationWorker');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,17 +14,41 @@ app.use(express.json());
 
 app.use('/api/v1', routes);
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port http://localhost:${PORT}`);
-});
+let server;
+
+async function bootstrap() {
+  try {
+    // Initialize RabbitMQ connection
+    await connectRabbitMQ();
+    
+    // Start the worker to consume messages
+    await startRegistrationWorker();
+
+    server = app.listen(PORT, () => {
+      console.log(`Server running on port http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+bootstrap();
 
 async function shutdown() {
   console.log('Shutting down...');
-  server.close(async () => {
+  if (server) {
+    server.close(async () => {
+      await closeRabbitMQ();
+      await prisma.$disconnect();
+      console.log('Database disconnected. Bye.');
+      process.exit(0);
+    });
+  } else {
+    await closeRabbitMQ();
     await prisma.$disconnect();
-    console.log('Database disconnected. Bye.');
     process.exit(0);
-  });
+  }
 }
 
 process.on('SIGINT', shutdown);
