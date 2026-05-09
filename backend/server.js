@@ -1,18 +1,20 @@
-require('dotenv/config');
+require("dotenv/config");
 
 // Global BigInt serialization fix for Prisma
-BigInt.prototype.toJSON = function() {
+BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
-const express = require('express');
-const cors = require('cors');
-const prisma = require('./src/config/db');
-const routes = require('./src/routes');
-const { connectRabbitMQ, closeRabbitMQ } = require('./src/config/rabbitmq');
-const { startRegistrationWorker } = require('./src/jobs/registrationWorker');
-const { globalLimiter } = require('./src/middlewares/rateLimiter.middleware');
-const { startReleaseReservedSeatsJob } = require('./src/jobs/releaseReservedSeats');
+const express = require("express");
+const cors = require("cors");
+const prisma = require("./src/config/db");
+const routes = require("./src/routes");
+const { connectRabbitMQ, closeRabbitMQ } = require("./src/config/rabbitmq");
+const { startRegistrationWorker } = require("./src/jobs/registrationWorker");
+const { globalLimiter } = require("./src/middlewares/rateLimiter.middleware");
+const {
+  startReleaseReservedSeatsJob,
+} = require("./src/jobs/releaseReservedSeats");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,7 +55,7 @@ async function initBackgroundServices() {
 }
 
 function bootstrap() {
-  server = app.listen(PORT, '0.0.0.0', () => {
+  server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port http://0.0.0.0:${PORT}`);
   });
 
