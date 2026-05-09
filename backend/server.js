@@ -27,6 +27,11 @@ async function bootstrap() {
     server = app.listen(PORT, () => {
       console.log(`Server running on port http://localhost:${PORT}`);
     });
+   
+    // Config keep alive timeout and headers timeout
+    // This is needed for long polling connections (SSE)
+    server.keepAliveTimeout = 61000;
+    server.headersTimeout = 65000;
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
