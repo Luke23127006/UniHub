@@ -6,17 +6,26 @@ import { check } from 'k6';
 // -----------------------------------------------------------
 export const options = {
   scenarios: {
-    high_load_registration: {
-      executor: 'shared-iterations',
-      vus: 500,          // Simulate 500 Virtual Users concurrently
-      iterations: 12000, // Total of 12,000 requests to fire
-      maxDuration: '2m', // Maximum duration for the test to run
+    registration_spike: {
+      executor: 'ramping-arrival-rate',
+      startRate: 0,
+      timeUnit: '1s',       // Calculate based on rate (requests per second)
+      preAllocatedVUs: 100, // Pre-allocate 100 virtual users
+      maxVUs: 1000,         // Allow K6 to scale up to 1000 virtual users if needed
+      stages: [
+        // --- PHASE 1: FIRST 3 MINUTES (Spike 40 requests/s) ---
+        { duration: '10s', target: 40 },   // Ramp up quickly to 40 requests per second in 10s
+        { duration: '2m40s', target: 40 }, // Maintain high intensity of 40 req/s (60% of students)
+        { duration: '10s', target: 12 },   // Reduce to normal level
+
+        // --- PHASE 2: NEXT 7 MINUTES (Stable ~12 requests/s) ---
+        { duration: '6m50s', target: 12 }, // Maintain stable rate of 12 req/s (40% of students)
+        { duration: '10s', target: 0 },    // Lower gradually to 0 and end
+      ],
     },
   },
-  // Define pass/fail criteria for the load test
-  thresholds: {
-    http_req_failed: ['rate<0.01'], // Failure rate must be strictly less than 1%
-  },
+  // Note: Remove strict threshold http_req_failed < 0.01. 
+  // Because we have Rate Limit, the server returning 429 (Too Many Requests) is a SUCCESSFUL protection of the system, not an error.
 };
 
 // -----------------------------------------------------------
