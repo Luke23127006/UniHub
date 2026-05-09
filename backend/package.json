@@ -1,25 +1,9 @@
 {
   "scripts": {
-    "postinstall": "prisma generate --schema src/prisma/schema.prisma",
-    "dev": "nodemon -L server.js",
+    "postinstall": "prisma generate",
+    "dev": "nodemon server.js",
     "start": "node server.js",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:load": "k6 run src/tests/loadtest.js",
-    "csv:generate": "python data/generate_students_csv.py",
-    "csv:sync": "node src/jobs/csvSyncWorker.js",
-    "csv:test": "node src/jobs/csvSyncWorker.test.js",
-    "test": "cross-env NODE_ENV=test jest"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/*.test.js"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "src/jobs/csvSyncWorker.test.js"
-    ]
+    "test:load": "k6 run loadtest.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
