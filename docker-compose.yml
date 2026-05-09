@@ -50,9 +50,25 @@ services:
     networks:
       - unihub_network
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: unihub_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:15672:15672" # Management UI
+    volumes:
+      - unihub_rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - unihub_network
+
 volumes:
   unihub_pg_data:
   unihub_redis_data:
+  unihub_rabbitmq_data:
 
 networks:
   unihub_network:
