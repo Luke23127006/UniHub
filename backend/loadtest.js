@@ -33,7 +33,7 @@ export const options = {
 // -----------------------------------------------------------
 export default function () {
   // Replace with your actual local endpoint. Here we use workshop ID 1.
-  const url = 'http://localhost:3000/api/v1/workshops/1/register';
+  const url = __ENV.K6_API_URL || 'http://localhost:3000/api/v1/workshops/1/register';
 
   // Generate a random user ID between 1 and 100,000
   // This prevents unique constraint violations in the DB when the worker processes the queue

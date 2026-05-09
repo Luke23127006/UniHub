@@ -2,7 +2,8 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:load": "k6 run loadtest.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
