@@ -1,7 +1,6 @@
 const { getChannel } = require('../config/rabbitmq');
 const RedisLock = require('../utils/redisLock');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const WorkshopService = require('../services/workshopService');
 
 async function processRegistrationMessage(msg, channel) {
   if (!msg) return;
@@ -30,65 +29,9 @@ async function processRegistrationMessage(msg, channel) {
   }
 
   try {
-    // Start DB Transaction
-    await prisma.$transaction(async (tx) => {
-      // 1. Check available_seats of the workshop
-      const workshop = await tx.workshop.findUnique({
-        where: { id: workshopId },
-        select: { id: true, available_seats: true, capacity: true }
-      });
-
-      if (!workshop) {
-        throw new Error(`Workshop ${workshopId} not found`);
-      }
-
-      // 2. Find the Student associated with the userId
-      const student = await tx.student.findUnique({
-        where: { user_id: userId },
-        select: { id: true }
-      });
-
-      if (!student) {
-        throw new Error(`Student record not found for user ${userId}`);
-      }
-
-      // 3. Check if user already registered
-      const existingRegistration = await tx.registration.findUnique({
-        where: {
-          student_id_workshop_id: {
-            student_id: student.id,
-            workshop_id: workshop.id
-          }
-        }
-      });
-
-      if (existingRegistration) {
-        throw new Error(`User ${userId} already registered for workshop ${workshopId}`);
-      }
-
-      if (workshop.available_seats > 0) {
-        // Decrement available_seats
-        await tx.workshop.update({
-          where: { id: workshopId },
-          data: { available_seats: { decrement: 1 } }
-        });
-
-        // Insert new Registration record
-        await tx.registration.create({
-          data: {
-            student_id: student.id,
-            workshop_id: workshop.id,
-            status: 'pending_payment'
-          }
-        });
-
-        console.log(`Successfully registered user ${userId} for workshop ${workshopId}`);
-      } else {
-        // Seats <= 0
-        console.log(`Workshop ${workshopId} is sold out. Skipping registration for user ${userId}.`);
-        // Transaction completes successfully without doing anything, acting as a skip/rollback of any logic
-      }
-    });
+    // Call the Service layer to handle business logic
+    const result = await WorkshopService.processRegistration(userId, workshopId);
+    console.log(result.message);
 
     // Acknowledge the message if transaction succeeded
     channel.ack(msg);
