@@ -53,64 +53,14 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: unihub_rabbitmq
     restart: always
-    env_file:
-      - .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "127.0.0.1:15672:15672" # Management UI
     volumes:
       - unihub_rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - unihub_network
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: unihub_backend
-    restart: always
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-      - redis
-      - rabbitmq
-    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run dev"
-    networks:
-      - unihub_network
-    volumes:
-      - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
-      - /usr/src/app/src/generated
-
-  payment-gateway:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: unihub_payment_gateway
-    restart: always
-    ports:
-      - "4000:4000"
-    command: node scripts/mock-gateway.js
-    networks:
-      - unihub_network
-    volumes:
-      - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
-
-  k6:
-    image: grafana/k6:latest
-    container_name: unihub_k6
-    profiles: ["test"]
-    volumes:
-      - ./backend/src/tests/loadtest.js:/tests/loadtest.js
-    command: run /tests/loadtest.js
-    env_file:
-      - .env
-    depends_on:
-      - backend
     networks:
       - unihub_network
 
