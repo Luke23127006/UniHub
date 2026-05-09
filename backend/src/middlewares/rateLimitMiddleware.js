@@ -1,13 +1,19 @@
 const rateLimit = require('express-rate-limit');
 
 const workshopRegistrationLimiter = rateLimit({
-  windowMs: 10 * 1000, // Time window: 10 seconds
-  max: 3, // Limit: Maximum 3 requests / 10 seconds per IP
+  windowMs: 10 * 1000, // 10 seconds
+  max: 2, // Only allow 1 user to click at most 2 times per 10 seconds
+
+  keyGenerator: (req) => {
+    return req.headers['x-user-id'] || req.ip; 
+  },
+  
   message: {
     message: 'The system is busy processing, please do not spam. Please try again in a few seconds.'
   },
-  standardHeaders: true, // Return RateLimit-* headers
-  legacyHeaders: false, // Disable X-RateLimit-* headers
+  
+  standardHeaders: true, 
+  legacyHeaders: false, 
 });
 
 module.exports = { workshopRegistrationLimiter };

@@ -83,7 +83,7 @@ services:
     container_name: unihub_k6
     profiles: ["test"]
     volumes:
-      - ./backend/loadtest.js:/tests/loadtest.js
+      - ./backend/src/tests/loadtest.js:/tests/loadtest.js
     command: run /tests/loadtest.js
     env_file:
       - .env
