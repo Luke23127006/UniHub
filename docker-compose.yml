@@ -7,10 +7,8 @@ services:
     restart: always
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
     volumes:
       - unihub_pg_data:/var/lib/postgresql/data
     networks:
@@ -20,9 +18,8 @@ services:
     image: dpage/pgadmin4:9.14
     container_name: unihub_pgadmin
     restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    env_file:
+      - .env
     ports:
       - "127.0.0.1:5050:80"
     networks:
@@ -54,14 +51,44 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: unihub_rabbitmq
     restart: always
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    env_file:
+      - .env
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "127.0.0.1:15672:15672" # Management UI
     volumes:
       - unihub_rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - unihub_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: unihub_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - unihub_network
+
+  k6:
+    image: grafana/k6:latest
+    container_name: unihub_k6
+    profiles: ["test"]
+    volumes:
+      - ./backend/loadtest.js:/tests/loadtest.js
+    command: run /tests/loadtest.js
+    env_file:
+      - .env
+    depends_on:
+      - backend
     networks:
       - unihub_network
 
