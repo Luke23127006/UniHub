@@ -10,12 +10,12 @@ export const options = {
       preAllocatedVUs: 100,
       maxVUs: 2000,
       stages: [
-        // --- PHASE 1: FIRST 3 MINUTES (Spike 40 requests/s) ---
+        // --- PHASE 1: FIRST 3 MINUTES (Spike 200 requests/s) ---
         { duration: '10s', target: 200 },
         { duration: '2m40s', target: 200 },
         { duration: '10s', target: 60 },
 
-        // --- PHASE 2: NEXT 7 MINUTES (Stable ~12 requests/s) ---
+        // --- PHASE 2: NEXT 7 MINUTES (Stable ~60 requests/s) ---
         { duration: '6m50s', target: 60 },
         { duration: '10s', target: 0 },
       ],
