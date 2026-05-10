@@ -49,9 +49,12 @@ export default function () {
   const res = http.post(url, payload, params);
 
   // Validate the response
-  // A successful push to RabbitMQ should return HTTP 202 Accepted immediately
+  // A successful push to RabbitMQ should return HTTP 202 Accepted immediately.
+  // Under load, HTTP 429 Too Many Requests is also an expected outcome because
+  // rate limiting is considered successful protection of the system for this test.
   check(res, {
-    'status is 202 Accepted': (r) => r.status === 202,
+    'status is 202 Accepted or 429 Too Many Requests': (r) =>
+      r.status === 202 || r.status === 429,
     'response time < 500ms': (r) => r.timings.duration < 500,
   });
 }
