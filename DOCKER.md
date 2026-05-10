@@ -50,7 +50,7 @@ docker logs unihub_backend -f
 
 ## ⚡ Running the K6 Load Test
 
-The K6 load testing service is configured under the `test` profile, meaning it will **not** run by default. To trigger the load test script (`backend/loadtest.js`) against the internal backend container:
+The K6 load testing service is configured under the `test` profile, meaning it will **not** run by default. To trigger the load test script (`backend/src/tests/loadtest.js`) against the internal backend container:
 
 ```bash
 docker-compose --profile test up k6
