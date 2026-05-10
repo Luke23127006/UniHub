@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import axiosClient from '@/utils/axiosClient';
 
 /**
  * GET /v1/analytics/overview
@@ -22,4 +22,4 @@ import api from '@/utils/api';
  * }
  */
 export const getAnalyticsOverview = (params) =>
-  api.get('/v1/analytics/overview', { params });
+  axiosClient.get('/v1/analytics/overview', { params });
