@@ -3,13 +3,17 @@
     "postinstall": "prisma generate",
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test:load": "k6 run src/tests/loadtest.js"
+    "test:load": "k6 run src/tests/loadtest.js",
+    "csv:generate": "python data/generate_students_csv.py",
+    "csv:sync": "node src/jobs/csvSyncWorker.js",
+    "csv:test": "node src/jobs/csvSyncWorker.test.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "amqplib": "^1.0.7",
     "cors": "^2.8.6",
+    "csv-parser": "^3.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.1",
