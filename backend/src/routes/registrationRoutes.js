@@ -1,11 +1,11 @@
 const express = require('express');
 const RegistrationController = require('../controllers/registrationController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const verifyToken = require('../middlewares/authMiddleware');
+const requireRoles = require('../middlewares/rbacMiddleware');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
 
 const router = express.Router();
 
-// Authenticate first so downstream middleware can use a trusted user identity
-router.post('/:id/register', authMiddleware, workshopRegistrationLimiter, RegistrationController.registerWorkshop);
+router.post('/:id/register', verifyToken, requireRoles(['Student']), workshopRegistrationLimiter, RegistrationController.registerWorkshop);
 
 module.exports = router;
