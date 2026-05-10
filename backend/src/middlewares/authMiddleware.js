@@ -10,11 +10,14 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ message: 'Unauthorized: Missing x-user-id header' });
   }
 
-  const userId = parseInt(userIdHeader, 10);
-  
-  if (isNaN(userId)) {
+  const normalizedUserIdHeader = Array.isArray(userIdHeader) ? userIdHeader[0] : userIdHeader;
+  const trimmedUserIdHeader = normalizedUserIdHeader.trim();
+
+  if (!/^\d+$/.test(trimmedUserIdHeader)) {
     return res.status(401).json({ message: 'Unauthorized: Invalid user ID format' });
   }
+
+  const userId = BigInt(trimmedUserIdHeader);
 
   // Mocking the user object
   req.user = {
