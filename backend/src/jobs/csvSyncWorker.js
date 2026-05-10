@@ -104,22 +104,22 @@ async function run() {
 
   console.log(`[CSV Sync] Starting — file: ${fileName}`);
 
-  // Create an audit record so admins can track every sync run.
-  const syncLog = await prisma.csvSyncLog.create({
-    data: {
-      file_name: fileName,
-      file_path: resolvedPath,
-      status: "processing",
-      started_at: new Date(),
-    },
-  });
-
+  let syncLog;
   let totalRows = 0;
   let processedRows = 0;
   let errorRows = 0;
   const errorDetails = [];
+  const MAX_ERROR_DETAILS = 100;
 
   try {
+    syncLog = await prisma.csvSyncLog.create({
+      data: {
+        file_name: fileName,
+        file_path: resolvedPath,
+        status: "processing",
+        started_at: new Date(),
+      },
+    });
     const { parser, getError } = createCsvStream(resolvedPath);
     let batch = [];
 
@@ -129,7 +129,9 @@ async function run() {
       const student_code = (row["MSSV"] || "").trim();
       if (!student_code) {
         errorRows++;
-        errorDetails.push(`Row ${totalRows}: missing MSSV`);
+        if (errorDetails.length < MAX_ERROR_DETAILS) {
+          errorDetails.push(`Row ${totalRows}: missing MSSV`);
+        }
         continue;
       }
 
@@ -174,17 +176,19 @@ async function run() {
     const elapsedMs = Date.now() - startTime;
     console.error(`[CSV Sync] Fatal error after ${elapsedMs}ms:`, err.message);
 
-    await prisma.csvSyncLog.update({
-      where: { id: syncLog.id },
-      data: {
-        status: "failed",
-        total_rows: totalRows,
-        processed_rows: processedRows,
-        error_rows: errorRows,
-        error_details: err.message,
-        completed_at: new Date(),
-      },
-    });
+    if (syncLog) {
+      await prisma.csvSyncLog.update({
+        where: { id: syncLog.id },
+        data: {
+          status: "failed",
+          total_rows: totalRows,
+          processed_rows: processedRows,
+          error_rows: errorRows,
+          error_details: err.message,
+          completed_at: new Date(),
+        },
+      });
+    }
 
     process.exitCode = 1;
   } finally {

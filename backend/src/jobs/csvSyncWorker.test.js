@@ -239,6 +239,13 @@ async function testLargeCsv() {
 // ── Runner ────────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (process.env.NODE_ENV !== "test") {
+    console.error(
+      "Safety guard: set NODE_ENV=test to run integration tests against the database."
+    );
+    process.exit(1);
+  }
+
   console.log("═══════════════════════════════════════════════");
   console.log("  csvSyncWorker — Integration Test Suite");
   console.log("═══════════════════════════════════════════════");
