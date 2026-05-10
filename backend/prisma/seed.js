@@ -41,8 +41,8 @@ async function main() {
         event_day: new Date(),
         start_time: new Date(),
         end_time: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // +2 hours
-        capacity: 12000,
-        available_seats: 12000,
+        capacity: 60,
+        available_seats: 60,
         is_paid: false,
         status: 'published',
         created_by: creator.id,
