@@ -8,7 +8,7 @@ class RegistrationController {
   static async registerWorkshop(req, res) {
     try {
       const workshopId = parseInt(req.params.id, 10);
-      const userId = req.user.id; // Set by authMiddleware (parseInt result)
+      const userId = req.user.sub; // Set by verifyToken (JWT sub claim)
 
       if (isNaN(workshopId) || workshopId <= 0) {
         return res.status(400).json({ message: 'Invalid workshop ID' });
