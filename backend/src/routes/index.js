@@ -4,6 +4,6 @@ const healthRoutes = require('./health.routes');
 const router = Router();
 
 router.use(healthRoutes);
-router.use('/workshops', require('./registrationRoutes'));
+router.use('/workshops', require('./registration.routes'));
 
 module.exports = router;
