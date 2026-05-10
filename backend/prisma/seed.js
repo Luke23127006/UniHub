@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../src/config/db');
 
 async function main() {
@@ -28,11 +29,9 @@ async function main() {
     });
   }
 
-  // 3. Create the mock workshop (ID 1 as expected by load test)
-  let workshop = await prisma.workshop.findUnique({ where: { id: 1 } });
+  // 3. Create the mock workshop (expected ID 1 by load test)
+  let workshop = await prisma.workshop.findUnique({ where: { id: BigInt(1) } });
   if (!workshop) {
-    // Note: We might need to handle identity insert or just create and ensure it has the correct ID
-    // If the database has no workshops, the first one will be ID 1.
     workshop = await prisma.workshop.create({
       data: {
         title: 'High-load Architecture Workshop',
@@ -40,7 +39,7 @@ async function main() {
         room_id: room.id,
         event_day: new Date(),
         start_time: new Date(),
-        end_time: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // +2 hours
+        end_time: new Date(Date.now() + 2 * 60 * 60 * 1000),
         capacity: 60,
         available_seats: 60,
         is_paid: false,
@@ -51,61 +50,77 @@ async function main() {
     console.log(`Created Workshop with ID: ${workshop.id}`);
   }
 
-  // 4. Create 100,000 Users and Students for the load test
+  // 4. Seed 100,000 Users and Students using parameterised $executeRaw.
+  //    $executeRawUnsafe with string interpolation was replaced here because:
+  //    - it breaks on values containing single quotes or backslashes, and
+  //    - Prisma.sql ensures all values are bound as parameters, not interpolated text.
   console.log('Seeding 100,000 users and students. This might take a minute...');
-  
-  const totalUsers = 100000;
-  const batchSize = 5000;
+
+  const totalUsers = 100_000;
+  const batchSize = 5_000;
 
   for (let i = 0; i < totalUsers; i += batchSize) {
-    const usersBatch = [];
-    const studentsBatch = [];
-    
-    // Check if user already exists to avoid unique constraint errors on re-runs
-    const existingUser = await prisma.user.findUnique({ where: { id: i + 1 } });
+    // Skip if the first user of this batch already exists (idempotent re-runs)
+    const existingUser = await prisma.user.findUnique({ where: { id: BigInt(i + 1) } });
     if (existingUser) {
-      console.log(`Batch ${i} to ${i + batchSize} already exists, skipping...`);
+      console.log(`Batch ${i + 1}–${i + batchSize} already exists, skipping...`);
       continue;
     }
 
+    const userValues = [];
+    const studentValues = [];
+
     for (let j = 1; j <= batchSize; j++) {
-      const userId = i + j;
-      usersBatch.push({
-        id: userId,
-        email: `student${userId}@unihub.local`,
-        full_name: `Test Student ${userId}`,
-        is_active: true,
-      });
-      
-      studentsBatch.push({
-        user_id: userId,
-        student_code: `STD${userId.toString().padStart(6, '0')}`,
-        full_name: `Test Student ${userId}`,
-        email: `student${userId}@unihub.local`,
-        is_active: true,
-      });
+      const uid = i + j;
+      const email = `student${uid}@unihub.local`;
+      const fullName = `Test Student ${uid}`;
+      const studentCode = `STD${uid.toString().padStart(6, '0')}`;
+
+      userValues.push(
+        Prisma.sql`(${BigInt(uid)}, ${email}, ${fullName}, true, NOW(), NOW())`
+      );
+      studentValues.push(
+        Prisma.sql`(${BigInt(uid)}, ${studentCode}, ${fullName}, ${email}, true, NOW(), NOW())`
+      );
     }
 
-    // Prisma doesn't support forcing IDs in createMany if it's auto-incrementing in Postgres
-    // However, since we are seeding an empty DB, the IDs will generally align, or we can use raw SQL
-    // to ensure IDs are exactly 1 to 100,000 as expected by load test.
-    
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO "users" (id, email, full_name, is_active, created_at, updated_at) 
-      VALUES ${usersBatch.map(u => `(${u.id}, '${u.email}', '${u.full_name}', true, NOW(), NOW())`).join(', ')}
-      ON CONFLICT (id) DO NOTHING;
-    `);
+    await prisma.$executeRaw(
+      Prisma.sql`
+        INSERT INTO "users" (id, email, full_name, is_active, created_at, updated_at)
+        VALUES ${Prisma.join(userValues)}
+        ON CONFLICT (id) DO NOTHING
+      `
+    );
 
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO "students" (user_id, student_code, full_name, email, is_active, created_at, updated_at) 
-      VALUES ${studentsBatch.map(s => `(${s.user_id}, '${s.student_code}', '${s.full_name}', '${s.email}', true, NOW(), NOW())`).join(', ')}
-      ON CONFLICT (student_code) DO NOTHING;
-    `);
+    await prisma.$executeRaw(
+      Prisma.sql`
+        INSERT INTO "students" (user_id, student_code, full_name, email, is_active, created_at, updated_at)
+        VALUES ${Prisma.join(studentValues)}
+        ON CONFLICT (student_code) DO NOTHING
+      `
+    );
 
-    console.log(`Seeded batch ${i} to ${i + batchSize}`);
+    console.log(`Seeded batch ${i + 1}–${i + batchSize}`);
   }
 
-  console.log('Seed completed successfully!');
+  // 5. Advance the auto-increment sequences so organic inserts after seeding
+  //    don't collide with the explicitly-set IDs (1–100,000).
+  //    When explicit IDs are inserted via raw SQL, Postgres's sequence is not
+  //    automatically updated and will restart from its last auto-generated value.
+  await prisma.$executeRaw`
+    SELECT setval(
+      pg_get_serial_sequence('"users"', 'id'),
+      (SELECT MAX(id) FROM "users")
+    )
+  `;
+  await prisma.$executeRaw`
+    SELECT setval(
+      pg_get_serial_sequence('"students"', 'id'),
+      (SELECT MAX(id) FROM "students")
+    )
+  `;
+
+  console.log('Sequences reset. Seed completed successfully!');
 }
 
 main()
