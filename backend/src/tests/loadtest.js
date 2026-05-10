@@ -6,7 +6,7 @@ export const options = {
     registration_spike: {
       executor: 'ramping-arrival-rate',
       startRate: 0,
-      timeUnit: '1s', 
+      timeUnit: '1s',
       preAllocatedVUs: 100,
       maxVUs: 2000,
       stages: [
@@ -21,7 +21,7 @@ export const options = {
       ],
     },
   },
-  // Note: Remove strict threshold http_req_failed < 0.01. 
+  // Note: Remove strict threshold http_req_failed < 0.01.
   // Because we have Rate Limit, the server returning 429 (Too Many Requests) is a SUCCESSFUL protection of the system, not an error.
 };
 
@@ -33,7 +33,7 @@ export default function () {
   // This prevents unique constraint violations in the DB when the worker processes the queue
   const randomUserId = Math.floor(Math.random() * 12000) + 1;
 
-  // The controller extracts data from route params and headers, 
+  // The controller extracts data from route params and headers,
   // so the payload body can just be empty.
   const payload = JSON.stringify({});
 
