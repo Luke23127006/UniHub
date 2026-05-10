@@ -3,27 +3,27 @@ const { getChannel } = require('../config/rabbitmq');
 class RegistrationController {
   /**
    * POST /workshops/:id/register
-   * Pushes the registration payload into RabbitMQ and returns 202
+   * Pushes the registration payload into RabbitMQ and returns 202.
    */
   static async registerWorkshop(req, res) {
     try {
       const workshopId = parseInt(req.params.id, 10);
-      const userId = req.user.id; // Extracted from mocked auth middleware
+      const userId = req.user.id; // Set by authMiddleware (parseInt result)
 
-      if (isNaN(workshopId)) {
+      if (isNaN(workshopId) || workshopId <= 0) {
         return res.status(400).json({ message: 'Invalid workshop ID' });
       }
 
+      // IDs are serialised as strings so the JSON payload is BigInt-safe for large IDs.
+      // WorkshopService converts them to BigInt before any Prisma call.
       const payload = {
-        workshopId,
-        userId,
-        timestamp: new Date().toISOString()
+        workshopId: workshopId.toString(),
+        userId: userId.toString(),
+        timestamp: new Date().toISOString(),
       };
 
       const channel = getChannel();
-      
-      // Push message to queue
-      // Persistent: true ensures message is saved to disk so it won't be lost if RabbitMQ crashes
+
       const sent = channel.sendToQueue(
         'workshop_registration_queue',
         Buffer.from(JSON.stringify(payload)),
@@ -35,9 +35,9 @@ class RegistrationController {
           message: 'Registration request accepted and is being processed.',
           workshopId,
         });
-      } else {
-        return res.status(500).json({ message: 'Failed to queue registration request.' });
       }
+
+      return res.status(500).json({ message: 'Failed to queue registration request.' });
     } catch (error) {
       console.error('Error in registerWorkshop controller:', error);
       return res.status(500).json({ message: 'Internal server error' });
