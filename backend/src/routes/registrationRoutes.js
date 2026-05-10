@@ -5,7 +5,7 @@ const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddlew
 
 const router = express.Router();
 
-// Apply mock auth middleware to extract user info
-router.post('/:id/register', workshopRegistrationLimiter, authMiddleware, RegistrationController.registerWorkshop);
+// Authenticate first so downstream middleware can use a trusted user identity
+router.post('/:id/register', authMiddleware, workshopRegistrationLimiter, RegistrationController.registerWorkshop);
 
 module.exports = router;
