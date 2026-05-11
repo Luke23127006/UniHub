@@ -6,6 +6,7 @@ const routes = require('./src/routes');
 const { connectRabbitMQ, closeRabbitMQ } = require('./src/config/rabbitmq');
 const { startRegistrationWorker } = require('./src/jobs/registrationWorker');
 const { globalLimiter } = require('./src/middlewares/rateLimiter.middleware');
+const { startReleaseReservedSeatsJob } = require('./src/jobs/releaseReservedSeats');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,9 @@ async function bootstrap() {
     
     // Start the worker to consume messages
     await startRegistrationWorker();
+
+    // Start cron jobs
+    startReleaseReservedSeatsJob();
 
     server = app.listen(PORT, () => {
       console.log(`Server running on port http://localhost:${PORT}`);
