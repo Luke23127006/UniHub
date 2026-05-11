@@ -47,6 +47,7 @@ enum WorkshopStatus {
 
 enum RegistrationStatus {
   pending_payment
+  reserved
   confirmed
   cancelled
   waitlisted
