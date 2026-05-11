@@ -3,10 +3,20 @@
     "postinstall": "prisma generate",
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "test:load": "k6 run src/tests/loadtest.js",
     "csv:generate": "python data/generate_students_csv.py",
     "csv:sync": "node src/jobs/csvSyncWorker.js",
     "csv:test": "node src/jobs/csvSyncWorker.test.js"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "clearMocks": true
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -22,6 +32,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "jest": "^30.4.2",
     "nodemon": "^3.1.14",
     "prisma": "^7.8.0"
   },
