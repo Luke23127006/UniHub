@@ -16,6 +16,15 @@ const prisma = require('../config/db');
  * @type {import('express').RequestHandler}
  */
 const verifyOwner = async (req, res, next) => {
+  // Validate before conversion: BigInt('') === 0n in Node.js — it does not throw.
+  // We require a non-empty string of digits representing a positive integer.
+  if (!/^\d+$/.test(req.params.id) || req.params.id === '0') {
+    return res.status(400).json({
+      status: 'error',
+      error: { code: 'INVALID_ID', message: 'Resource ID is invalid.' },
+    });
+  }
+
   let registration;
   try {
     const registrationId = BigInt(req.params.id);
@@ -24,9 +33,9 @@ const verifyOwner = async (req, res, next) => {
       select: { student: { select: { user_id: true } } },
     });
   } catch {
-    return res.status(400).json({
+    return res.status(500).json({
       status: 'error',
-      error: { code: 'INVALID_ID', message: 'Resource ID is invalid.' },
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
     });
   }
 
