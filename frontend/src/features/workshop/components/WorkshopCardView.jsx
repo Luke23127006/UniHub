@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-import StatusBadge from "@/components/StatusBadge";
+import { Link } from 'react-router';
+import StatusBadge from '@/components/StatusBadge';
 
 /** Top accent bar colour driven by workshop status. */
 const STATUS_ACCENT = {
@@ -121,10 +121,10 @@ export default function WorkshopCardView({ workshops }) {
             </div>
 
             {/* Title */}
-            <h3 className="font-black text-lg text-gray-900 dark:text-white leading-tight uppercase tracking-tighter line-clamp-2 min-h-[3rem]">
+            <h3 className="font-semibold leading-snug line-clamp-2">
               <Link
                 to={`/workshops/${w.id}`}
-                className="hover:text-cyan-500 transition-colors"
+                className="text-unihub-text dark:text-gray-100 hover:text-unihub-primary dark:hover:text-unihub-gold"
               >
                 {w.title}
               </Link>
@@ -170,7 +170,16 @@ export default function WorkshopCardView({ workshops }) {
                   />
                 </svg>
                 <span className="truncate">
-                  {w.room?.room_code ?? "TBA"} · {w.room?.building ?? "TBA"}
+                  {w.room?.room_code ?? 'TBA'} · {w.room?.building ?? 'TBA'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Person icon */}
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                <span className="truncate">
+                  {w.speakers.map((s) => s.full_name).join(', ') || 'TBA'}
                 </span>
               </div>
             </div>
