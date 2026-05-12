@@ -1,7 +1,5 @@
-import { Link, NavLink } from "react-router";
-import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@/context/AuthContext";
-import { GraduationCap, LayoutGrid, Ticket, User } from "lucide-react";
+import { Link, NavLink } from 'react-router';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
@@ -12,11 +10,6 @@ export default function Navbar() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link to="/" className="flex items-center gap-2">
-          <GraduationCap
-            size={28}
-            className="text-unihub-gold"
-            strokeWidth={2.5}
-          />
           <span className="text-unihub-gold font-bold text-xl tracking-wide">
             UniHub
           </span>
@@ -27,36 +20,20 @@ export default function Navbar() {
 
         {/* Navigation links */}
         <ul className="hidden md:flex items-center gap-6">
-          <li>
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                `flex items-center gap-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-unihub-gold"
-                    : "text-unihub-bg/80 dark:text-gray-300 hover:text-unihub-gold"
-                }`
-              }
-            >
-              <LayoutGrid size={18} />
-              Workshops
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/my-tickets"
-              className={({ isActive }) =>
-                `flex items-center gap-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-unihub-gold"
-                    : "text-unihub-bg/80 dark:text-gray-300 hover:text-unihub-gold"
-                }`
-              }
-            >
-              <Ticket size={18} />
-              My Registrations
-            </NavLink>
-          </li>
+          {[
+            { label: 'Workshops', to: '/' },
+            { label: 'Schedule', to: '/' },
+            { label: 'My Registrations', to: '/' },
+          ].map((item) => (
+            <li key={item.label}>
+              <NavLink
+                to={item.to}
+                className="text-unihub-bg/80 dark:text-gray-300 hover:text-unihub-gold dark:hover:text-white text-sm font-medium transition-colors"
+              >
+                {item.label}
+              </NavLink>
+            </li>
+          ))}
         </ul>
 
         {/* Right side: theme toggle + auth action */}

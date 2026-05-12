@@ -275,19 +275,10 @@ Maintain a short route inventory in this file when adding major pages:
 | --- | --- | --- | --- | --- |
 | `/` | workshop | `WorkshopListPage` | loader -> `workshopApi.list` | done |
 | `/workshops/:id` | workshop | `WorkshopDetailPage` | loader -> `workshopApi.getById` | done |
-| `/login` | auth | `LoginPage` | action | done |
-| `/my-tickets` | registration | `MyTicketPage` | loader -> `ticketApi.list` | done |
-| `/my-tickets/:id` | registration | `TicketDetailPage` | loader -> `ticketApi.getById` | done |
-| `/workshops/:id/register` | registration | `RegistrationPage` | loader + action | done |
-| `/checkout/:paymentId` | registration | `CheckoutPage` | loader + action | done |
-| `/payment/success` | registration | `PaymentSuccessPage` | — | done |
-| `/payment/failure` | registration | `PaymentFailurePage` | — | done |
-| `/403` | error | `ForbiddenPage` | — | done |
-| `*` | error | `NotFoundPage` | — | done |
 | `/admin/workshops` | admin/workshop | `AdminWorkshopListPage` | loader | planned |
 | `/admin/workshops/new` | admin/workshop | `WorkshopCreatePage` | action | planned |
 | `/admin/workshops/:id/edit` | admin/workshop | `WorkshopEditPage` | loader + action | planned |
-| `/login` | auth | `LoginPage` | action | done |
+| `/login` | auth | `LoginPage` | action or local submit | planned |
 
 When implementing a route, update `Status` to `done`.
 

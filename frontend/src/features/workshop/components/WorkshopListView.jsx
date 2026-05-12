@@ -67,12 +67,12 @@ export default function WorkshopListView({ workshops }) {
             <div className="min-w-0">
               <Link
                 to={`/workshops/${w.id}`}
-                className="block font-black text-sm text-gray-900 dark:text-gray-100 hover:text-cyan-500 uppercase tracking-tighter truncate transition-colors"
+                className="block font-semibold text-unihub-text dark:text-gray-100 hover:text-unihub-primary dark:hover:text-unihub-gold truncate"
               >
                 {w.title}
               </Link>
-              <p className="text-[10px] text-gray-400 font-medium italic truncate mt-1">
-                {w.speakers.map((s) => s.full_name).join(', ') || 'Staff Personnel TBA'}
+              <p className="text-xs text-unihub-muted dark:text-gray-400 truncate mt-0.5">
+                {w.speakers.map((s) => s.full_name).join(', ') || 'TBA'}
               </p>
             </div>
 
@@ -83,9 +83,9 @@ export default function WorkshopListView({ workshops }) {
             </div>
 
             {/* Room */}
-            <div className="text-xs text-gray-600 dark:text-gray-400">
-              <p className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tighter">{w.room?.room_code ?? 'TBA'}</p>
-              <p className="text-[10px] text-gray-400 truncate mt-0.5">{w.room?.building ?? 'TBA'}</p>
+            <div className="text-sm text-unihub-muted dark:text-gray-400">
+              <p className="font-medium text-unihub-text dark:text-gray-300">{w.room?.room_code ?? 'TBA'}</p>
+              <p className="text-xs truncate">{w.room?.building ?? 'TBA'}</p>
             </div>
 
             {/* Seats */}
