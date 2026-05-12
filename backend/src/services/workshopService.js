@@ -10,6 +10,64 @@ class WorkshopService {
    * @param {number|string} workshopId
    * @returns {Promise<{success: boolean, message: string}>}
    */
+  static async getAllWorkshops() {
+    return prisma.workshop.findMany({
+      where: { status: 'published' },
+      select: {
+        id: true,
+        title: true,
+        event_day: true,
+        start_time: true,
+        end_time: true,
+        capacity: true,
+        available_seats: true,
+        is_paid: true,
+        price: true,
+        room: { select: { name: true, building: true } },
+        workshop_speakers: {
+          select: { speaker: { select: { full_name: true, title: true } }, is_main_speaker: true },
+          orderBy: { display_order: 'asc' },
+        },
+      },
+      orderBy: { event_day: 'asc' },
+    });
+  }
+
+  static async getWorkshopById(id) {
+    const workshop = await prisma.workshop.findUnique({
+      where: { id: BigInt(id) },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        event_day: true,
+        start_time: true,
+        end_time: true,
+        capacity: true,
+        available_seats: true,
+        is_paid: true,
+        price: true,
+        status: true,
+        room: { select: { name: true, building: true, floor: true, layout_image_url: true } },
+        workshop_speakers: {
+          select: {
+            is_main_speaker: true,
+            speaker: { select: { full_name: true, title: true, organization: true, bio: true, avatar_url: true } },
+          },
+          orderBy: { display_order: 'asc' },
+        },
+        ai_summaries: {
+          where: { status: 'completed' },
+          select: { summary_text: true, completed_at: true },
+          orderBy: { completed_at: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    return workshop;
+  }
+
   static async processRegistration(userId, workshopId) {
     // Prisma requires BigInt values for BigInt schema columns.
     // IDs arrive as JS numbers (from JSON payloads) or strings — both coerce correctly.
