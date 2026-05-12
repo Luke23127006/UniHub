@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { redisPublisher } = require('../config/redisPubSub');
 
 class WorkshopService {
   /**
@@ -15,7 +16,7 @@ class WorkshopService {
     const userIdBig = BigInt(userId);
     const workshopIdBig = BigInt(workshopId);
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Check available_seats of the workshop
       const workshop = await tx.workshop.findUnique({
         where: { id: workshopIdBig },
@@ -52,9 +53,10 @@ class WorkshopService {
       }
 
       if (workshop.available_seats > 0) {
-        await tx.workshop.update({
+        const updatedWorkshop = await tx.workshop.update({
           where: { id: workshopIdBig },
-          data: { available_seats: { decrement: 1 } }
+          data: { available_seats: { decrement: 1 } },
+          select: { available_seats: true },
         });
 
         await tx.registration.create({
@@ -67,7 +69,8 @@ class WorkshopService {
 
         return {
           success: true,
-          message: `Successfully registered user ${userId} for workshop ${workshopId}`
+          message: `Successfully registered user ${userId} for workshop ${workshopId}`,
+          _seatBroadcast: { workshopId: Number(workshopIdBig), availableSeats: updatedWorkshop.available_seats },
         };
       }
 
@@ -76,6 +79,19 @@ class WorkshopService {
         message: `Workshop ${workshopId} is sold out. Skipping registration for user ${userId}.`
       };
     });
+
+    if (result._seatBroadcast) {
+      try {
+        await redisPublisher.publish(
+          'seat_updates',
+          JSON.stringify(result._seatBroadcast)
+        );
+      } catch (err) {
+        console.error('[Redis Pub] Failed to broadcast seat_updates — registration unaffected:', err);
+      }
+    }
+
+    return result;
   }
 }
 
