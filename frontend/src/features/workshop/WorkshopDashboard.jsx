@@ -4,7 +4,6 @@ import ViewModeToggle from '@/components/ViewModeToggle';
 import WorkshopCardView from './components/WorkshopCardView';
 import WorkshopListView from './components/WorkshopListView';
 import WorkshopCompactView from './components/WorkshopCompactView';
-import { MOCK_WORKSHOPS } from './data/mockWorkshops';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -43,30 +42,28 @@ function StatCard({ label, value, accent }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function WorkshopDashboard() {
+export default function WorkshopDashboard({ workshops = [] }) {
   const { viewMode, setViewMode } = useViewMode('card');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  // Derived stats from the full (unfiltered) dataset
   const stats = useMemo(() => {
-    const published = MOCK_WORKSHOPS.filter((w) => w.status === 'published');
+    const published = workshops.filter((w) => w.status === 'published');
     return {
-      total: MOCK_WORKSHOPS.length,
+      total: workshops.length,
       published: published.length,
       totalSeats: published.reduce((acc, w) => acc + w.available_seats, 0),
-      paid: MOCK_WORKSHOPS.filter((w) => w.is_paid).length,
+      paid: workshops.filter((w) => w.is_paid).length,
     };
-  }, []);
+  }, [workshops]);
 
-  // Filtered list recomputed whenever any filter changes
   const filtered = useMemo(() => {
-    return MOCK_WORKSHOPS.filter((w) => {
+    return workshops.filter((w) => {
       const matchesSearch =
         !search ||
         w.title.toLowerCase().includes(search.toLowerCase()) ||
-        w.speakers.some((s) => s.full_name.toLowerCase().includes(search.toLowerCase()));
+        w.speakers.some((s) => (s.full_name || '').toLowerCase().includes(search.toLowerCase()));
 
       const matchesStatus = statusFilter === 'all' || w.status === statusFilter;
 
@@ -77,7 +74,7 @@ export default function WorkshopDashboard() {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [search, statusFilter, typeFilter]);
+  }, [search, statusFilter, typeFilter, workshops]);
 
   const ActiveView = VIEW_COMPONENTS[viewMode];
 
@@ -166,7 +163,7 @@ export default function WorkshopDashboard() {
 
       {/* ── Result count ── */}
       <p className="text-xs text-unihub-muted dark:text-gray-500">
-        Showing <span className="font-semibold text-unihub-text dark:text-gray-300">{filtered.length}</span> of {MOCK_WORKSHOPS.length} workshops
+        Showing <span className="font-semibold text-unihub-text dark:text-gray-300">{filtered.length}</span> of {workshops.length} workshops
       </p>
 
       {/* ── Active view ── */}
