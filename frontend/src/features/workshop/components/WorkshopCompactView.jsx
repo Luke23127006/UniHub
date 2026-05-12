@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import StatusBadge from '@/components/StatusBadge';
 
 const STATUS_DOT = {
@@ -45,9 +46,12 @@ export default function WorkshopCompactView({ workshops }) {
           />
 
           {/* Title — fills available space */}
-          <span className="flex-1 min-w-0 text-sm font-medium text-unihub-text dark:text-gray-200 truncate">
+          <Link
+            to={`/workshops/${w.id}`}
+            className="flex-1 min-w-0 text-sm font-medium text-unihub-text dark:text-gray-200 hover:text-unihub-primary dark:hover:text-unihub-gold truncate"
+          >
             {w.title}
-          </span>
+          </Link>
 
           {/* Date */}
           <span className="hidden sm:block shrink-0 text-xs text-unihub-muted dark:text-gray-400 w-20 text-right">
@@ -56,7 +60,7 @@ export default function WorkshopCompactView({ workshops }) {
 
           {/* Room */}
           <span className="hidden md:block shrink-0 text-xs text-unihub-muted dark:text-gray-400 w-20 text-center font-mono">
-            {w.room.room_code}
+            {w.room?.room_code ?? 'TBA'}
           </span>
 
           {/* Seats */}

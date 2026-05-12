@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import StatusBadge from '@/components/StatusBadge';
 
 function formatDate(dateStr) {
@@ -65,9 +66,14 @@ export default function WorkshopListView({ workshops }) {
           >
             {/* Title + speaker */}
             <div className="min-w-0">
-              <p className="font-semibold text-unihub-text dark:text-gray-100 truncate">{w.title}</p>
+              <Link
+                to={`/workshops/${w.id}`}
+                className="block font-semibold text-unihub-text dark:text-gray-100 hover:text-unihub-primary dark:hover:text-unihub-gold truncate"
+              >
+                {w.title}
+              </Link>
               <p className="text-xs text-unihub-muted dark:text-gray-400 truncate mt-0.5">
-                {w.speakers.map((s) => s.full_name).join(', ')}
+                {w.speakers.map((s) => s.full_name).join(', ') || 'TBA'}
               </p>
             </div>
 
@@ -79,8 +85,8 @@ export default function WorkshopListView({ workshops }) {
 
             {/* Room */}
             <div className="text-sm text-unihub-muted dark:text-gray-400">
-              <p className="font-medium text-unihub-text dark:text-gray-300">{w.room.room_code}</p>
-              <p className="text-xs truncate">{w.room.building}</p>
+              <p className="font-medium text-unihub-text dark:text-gray-300">{w.room?.room_code ?? 'TBA'}</p>
+              <p className="text-xs truncate">{w.room?.building ?? 'TBA'}</p>
             </div>
 
             {/* Seats */}

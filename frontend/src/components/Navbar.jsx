@@ -1,3 +1,4 @@
+import { Link, NavLink } from 'react-router';
 import { useTheme } from '@/context/ThemeContext';
 
 /**
@@ -17,25 +18,29 @@ export default function Navbar() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
         {/* Brand */}
-        <a href="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <span className="text-unihub-gold font-bold text-xl tracking-wide">
             UniHub
           </span>
           <span className="hidden sm:inline text-unihub-bg/70 dark:text-gray-400 text-sm">
             Workshop Portal
           </span>
-        </a>
+        </Link>
 
         {/* Navigation links */}
         <ul className="hidden md:flex items-center gap-6">
-          {['Workshops', 'Schedule', 'My Registrations'].map((label) => (
-            <li key={label}>
-              <a
-                href="#"
+          {[
+            { label: 'Workshops', to: '/' },
+            { label: 'Schedule', to: '/' },
+            { label: 'My Registrations', to: '/' },
+          ].map((item) => (
+            <li key={item.label}>
+              <NavLink
+                to={item.to}
                 className="text-unihub-bg/80 dark:text-gray-300 hover:text-unihub-gold dark:hover:text-white text-sm font-medium transition-colors"
               >
-                {label}
-              </a>
+                {item.label}
+              </NavLink>
             </li>
           ))}
         </ul>
