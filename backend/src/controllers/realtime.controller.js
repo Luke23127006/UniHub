@@ -1,4 +1,5 @@
 const { redisSubscriber } = require('../config/redisPubSub');
+const prisma = require('../config/db');
 
 // clientId -> { res, trackedWorkshopIds: number[] }
 const activeClients = new Map();
@@ -55,4 +56,27 @@ function streamSeats(req, res) {
   });
 }
 
-module.exports = { streamSeats };
+async function getSeatsBatch(req, res) {
+  const raw = req.query.ids ?? '';
+  const ids = raw
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n) && n > 0);
+
+  if (ids.length === 0) {
+    return res.status(400).json({ message: 'Query parameter "ids" must be a non-empty comma-separated list of workshop IDs.' });
+  }
+
+  const workshops = await prisma.workshop.findMany({
+    where: { id: { in: ids.map(BigInt) } },
+    select: { id: true, available_seats: true },
+  });
+
+  const seats = Object.fromEntries(
+    workshops.map((w) => [w.id.toString(), w.available_seats])
+  );
+
+  return res.status(200).json(seats);
+}
+
+module.exports = { streamSeats, getSeatsBatch };
