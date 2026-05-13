@@ -1,7 +1,7 @@
 {
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "nodemon server.js",
+    "dev": "nodemon -L server.js",
     "start": "node server.js",
     "test:load": "k6 run src/tests/loadtest.js"
   },
