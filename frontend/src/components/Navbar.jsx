@@ -32,7 +32,7 @@ export default function Navbar() {
           {[
             { label: 'Workshops', to: '/' },
             { label: 'Schedule', to: '/' },
-            { label: 'My Registrations', to: '/' },
+            { label: 'My Registrations', to: '/my-tickets' },
           ].map((item) => (
             <li key={item.label}>
               <NavLink
