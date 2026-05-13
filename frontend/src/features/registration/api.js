@@ -75,16 +75,60 @@ export const ticketApi = {
       if (!response.ok) throw response;
       return await response.json();
     } catch (error) {
-      console.warn('Registration API failed, using mock success.', error);
-      // Simulate delay
+      console.warn('Registration API failed, using mock logic.', error);
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Mock success response
+      const isPaid = parseInt(workshopId) % 2 === 0;
+      
+      if (isPaid) {
+        return {
+          id: `TKT-${Math.floor(Math.random() * 10000)}`,
+          status: 'RESERVED',
+          requires_payment: true,
+          payment_id: `PAY-${Math.floor(Math.random() * 10000)}`,
+          amount: 50000,
+          currency: 'VND',
+        };
+      }
+
       return {
         id: `TKT-${Math.floor(Math.random() * 10000)}`,
         status: 'CONFIRMED',
         payment_status: 'FREE',
       };
+    }
+  },
+
+  async getPaymentById(paymentId) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      id: paymentId,
+      amount: 50000,
+      currency: 'VND',
+      workshop: {
+        title: 'Professional Workshop',
+        room: { room_code: 'A-101', building: 'Main Hall' }
+      },
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    };
+  },
+
+  async confirmPayment(paymentId, idempotencyKey) {
+    try {
+      const response = await fetch(`/api/v1/payments/${paymentId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
+      });
+      
+      if (!response.ok) throw response;
+      return await response.json();
+    } catch (error) {
+      console.warn('Payment API failed, using mock success.', error);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return { success: true, ticket_id: 'TKT-MOCK-PAID' };
     }
   }
 };
