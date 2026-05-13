@@ -48,7 +48,7 @@ export default function TicketDetailPage() {
         logging: false,
         useCORS: true,
       });
-      
+
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `UniHub-Ticket-${ticket.id}.png`;
@@ -82,7 +82,7 @@ export default function TicketDetailPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)] py-12 px-4 overflow-hidden">
-      
+
       {/* Background Tech Elements - Optimized for performance */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-10 dark:opacity-20 print:hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:48px_48px]"></div>
@@ -91,7 +91,7 @@ export default function TicketDetailPage() {
       </div>
 
       <div className="max-w-4xl mx-auto relative z-10 print:max-w-none print:m-0">
-        
+
         {/* HUD Navigation - Hidden during print */}
         <div className="flex items-center justify-between mb-8 print:hidden">
           <Link to="/my-tickets" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-cyan-500 transition-colors">
@@ -106,15 +106,15 @@ export default function TicketDetailPage() {
 
         {/* The Digital Boarding Pass */}
         <div id="ticket-pass" className={`relative group transition-all duration-500 print:opacity-100 print:grayscale-0 ${isCancelled ? 'opacity-70 grayscale-[0.3]' : ''}`}>
-          
+
           {/* Subtle Glow - Optimized */}
           <div className={`absolute -inset-0.5 bg-gradient-to-br from-${accentColor}-500/30 to-purple-600/30 rounded-[2rem] blur-sm opacity-10 group-hover:opacity-20 transition duration-500 print:hidden`}></div>
-          
+
           <div className="relative flex flex-col md:flex-row bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-xl overflow-hidden print:shadow-none print:border-gray-300">
-            
+
             {/* Left Section: Info (70%) */}
             <div className="flex-[2] p-6 sm:p-8 border-b md:border-b-0 md:border-r border-dashed border-gray-200 dark:border-gray-800 relative">
-              
+
               {/* Perforated circles */}
               <div className="hidden md:block absolute -right-3 top-0 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
               <div className="hidden md:block absolute -right-3 bottom-0 translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
@@ -187,7 +187,7 @@ export default function TicketDetailPage() {
 
             {/* Right Section: QR Stub */}
             <div className="w-full md:w-64 bg-gray-50/50 dark:bg-gray-800/30 p-6 flex flex-col items-center justify-center relative">
-              
+
               {/* Optimized scan animation */}
               {!isCancelled && (
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/90 to-transparent animate-[scan_3s_linear_infinite] will-change-[top,opacity] z-20 print:hidden"></div>
@@ -200,9 +200,9 @@ export default function TicketDetailPage() {
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-500/30 rounded-br-sm"></div>
 
                 <div className="bg-white p-2 rounded-lg shadow-sm">
-                  <QRCodeSVG 
-                    value={ticket.id} 
-                    size={100} 
+                  <QRCodeSVG
+                    value={ticket.id}
+                    size={100}
                     level="M"
                     fgColor={isCancelled ? "#94a3b8" : "#0f172a"}
                   />
@@ -219,14 +219,14 @@ export default function TicketDetailPage() {
 
         {/* Bottom Actions - Hidden during print */}
         <div className="mt-8 grid grid-cols-2 gap-4 print:hidden">
-          <button 
+          <button
             onClick={handlePrint}
             className="flex items-center justify-center gap-3 py-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-95"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
             Print
           </button>
-          <button 
+          <button
             onClick={handleDownload}
             className="flex items-center justify-center gap-3 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity active:scale-95"
           >
@@ -235,9 +235,10 @@ export default function TicketDetailPage() {
           </button>
         </div>
       </div>
-      
+
       {/* Global CSS - Optimized */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes scan {
           0% { top: 0; opacity: 0; }
           20% { opacity: 0.3; }
