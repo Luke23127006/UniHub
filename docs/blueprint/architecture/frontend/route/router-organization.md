@@ -287,6 +287,7 @@ Maintain a short route inventory in this file when adding major pages:
 | `/admin/workshops` | admin/workshop | `AdminWorkshopListPage` | loader | planned |
 | `/admin/workshops/new` | admin/workshop | `WorkshopCreatePage` | action | planned |
 | `/admin/workshops/:id/edit` | admin/workshop | `WorkshopEditPage` | loader + action | planned |
+| `/login` | auth | `LoginPage` | action | done |
 
 When implementing a route, update `Status` to `done`.
 
