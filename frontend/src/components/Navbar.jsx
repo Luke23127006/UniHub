@@ -65,23 +65,10 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* Auth Button/Avatar */}
-          {isAuthenticated ? (
-            <Link
-              to="/profile"
-              className="w-10 h-10 rounded-full bg-unihub-gold flex items-center justify-center text-unihub-bg hover:scale-105 transition-transform"
-              title="View Profile"
-            >
-              <User size={22} strokeWidth={2.5} />
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              className="bg-unihub-gold text-unihub-text hover:bg-yellow-400 dark:hover:bg-yellow-300 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors"
-            >
-              Sign In
-            </Link>
-          )}
+          {/* Sign-in button */}
+          <Link to="/login" className="bg-unihub-gold text-unihub-text hover:bg-yellow-400 dark:hover:bg-yellow-300 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors">
+            Sign In
+          </Link>
         </div>
       </nav>
     </header>
