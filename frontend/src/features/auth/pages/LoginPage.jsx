@@ -273,6 +273,26 @@ export default function LoginPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      if (!cardRef.current) return;
+      const rect = cardRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 3;
+      
+      const dx = (event.clientX - centerX) / (rect.width / 2);
+      const dy = (event.clientY - centerY) / (rect.height / 2);
+      
+      setMousePos({ 
+        x: Math.max(-1, Math.min(1, dx)), 
+        y: Math.max(-1, Math.min(1, dy)) 
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   return (
     <section className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-8">
       <div className="w-full max-w-[420px]" ref={cardRef}>
@@ -376,6 +396,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
     </section>
   );
 }
