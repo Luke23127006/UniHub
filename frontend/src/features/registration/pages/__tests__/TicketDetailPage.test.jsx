@@ -54,7 +54,7 @@ describe('TicketDetailPage', () => {
 
     // New labels: 'System Error: Ticket Not Found' and 'Return to Terminal'
     expect(screen.getByText(/System Error: Ticket Not Found/i)).toBeInTheDocument();
-    expect(screen.getByText(/Return to Terminal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Return to Registry/i)).toBeInTheDocument();
   });
 
   it('displays the QR code for check-in', () => {
