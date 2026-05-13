@@ -78,6 +78,7 @@ export default function TicketDetailPage() {
   }
 
   const isCancelled = ticket.status === 'CANCELLED';
+  const accentColor = isCancelled ? 'rose' : ticket.status === 'PENDING' ? 'amber' : 'cyan';
 
   // Static class maps — Tailwind's scanner cannot detect runtime-interpolated class names.
   const accentGlow = isCancelled
