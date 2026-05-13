@@ -1,43 +1,8 @@
-import { useLocation, Link, useSearchParams } from 'react-router';
-import { useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { ticketApi } from '../api';
+import { useLocation, Link } from 'react-router';
 
 export default function PaymentSuccessPage() {
-  const [searchParams] = useSearchParams();
-  const ticketId = searchParams.get('ticketId') || 'N/A';
-  
-  const [qrToken, setQrToken] = useState(null);
-  const [status, setStatus] = useState('PENDING');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let pollInterval;
-
-    const checkStatus = async () => {
-      try {
-        const data = await ticketApi.getRegistrationStatus(ticketId);
-        setStatus(data.status);
-        
-        if (data.status === 'CONFIRMED') {
-          setQrToken(data.checkin_token);
-          setLoading(false);
-          if (pollInterval) clearInterval(pollInterval);
-        }
-      } catch (err) {
-        console.error('Polling failed', err);
-      }
-    };
-
-    if (ticketId !== 'N/A') {
-      checkStatus(); // Initial check
-      pollInterval = setInterval(checkStatus, 2000);
-    }
-
-    return () => {
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [ticketId]);
+  const location = useLocation();
+  const ticketId = location.state?.ticketId || 'N/A';
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)] py-12 px-4 flex items-center justify-center">
@@ -47,80 +12,42 @@ export default function PaymentSuccessPage() {
       <div className="max-w-md w-full relative z-10 text-center">
         <div className="mb-10 relative inline-block">
             <div className="absolute inset-0 bg-cyan-500 blur-3xl opacity-20 animate-pulse"></div>
-            <div className="relative w-20 h-20 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="relative w-24 h-24 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-2xl flex items-center justify-center mx-auto mb-8">
+                <svg className="w-12 h-12 text-cyan-500 animate-[bounce_2s_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
             </div>
             
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-2">
-                Registration Confirmed
+            <h1 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">
+                Payment Successful
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                Your entry ticket has been generated. Show the QR code below at the venue.
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                Your workshop registration is confirmed. A digital ticket has been issued to your account.
             </p>
         </div>
 
-        {/* QR Ticket Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-800 p-8 shadow-2xl mb-10 relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
-            
-            <div className="flex flex-col items-center">
-                <div className="bg-white p-4 rounded-3xl shadow-inner mb-6 border border-gray-50">
-                    {loading ? (
-                      <div className="w-[180px] h-[180px] flex items-center justify-center bg-gray-50 rounded-2xl animate-pulse text-center p-4">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
-                          {status === 'CONFIRMED' ? 'Generating QR...' : 'Verifying Transaction...'}
-                        </span>
-                      </div>
-                    ) : qrToken ? (
-                      <QRCodeSVG 
-                        value={qrToken} 
-                        size={180}
-                        level="H"
-                        includeMargin={false}
-                        imageSettings={{
-                          src: "/favicon.ico",
-                          x: undefined,
-                          y: undefined,
-                          height: 24,
-                          width: 24,
-                          excavate: true,
-                        }}
-                      />
-                    ) : (
-                      <div className="w-[180px] h-[180px] flex items-center justify-center bg-rose-50 rounded-2xl">
-                        <span className="text-[10px] font-black text-rose-300 uppercase tracking-widest">Failed</span>
-                      </div>
-                    )}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-8 shadow-xl mb-10 text-left">
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest font-mono">Ticket ID</span>
+                    <span className="text-xs font-black text-gray-900 dark:text-white font-mono">{ticketId}</span>
                 </div>
-
-                <div className="w-full space-y-3 pt-6 border-t border-dashed border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest font-mono">Ticket ID</span>
-                        <span className="text-[10px] font-black text-gray-900 dark:text-white font-mono">{ticketId}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest font-mono">Status</span>
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-                            <div className="w-1 h-1 rounded-full bg-cyan-500"></div>
-                            <span className="text-[8px] font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">Valid</span>
-                        </span>
-                    </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest font-mono">Status</span>
+                    <span className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">Confirmed</span>
+                    </span>
                 </div>
             </div>
-            
-            {/* Cutout circles for ticket look */}
-            <div className="absolute top-1/2 -left-4 w-8 h-8 bg-gray-50 dark:bg-gray-950 rounded-full border border-gray-100 dark:border-gray-800"></div>
-            <div className="absolute top-1/2 -right-4 w-8 h-8 bg-gray-50 dark:bg-gray-950 rounded-full border border-gray-100 dark:border-gray-800"></div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
             <Link to={`/my-tickets/${ticketId}`} className="flex-1 py-4 px-8 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:shadow-2xl active:scale-[0.98]">
-                Management
+                View Ticket
             </Link>
             <Link to="/" className="flex-1 py-4 px-8 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98]">
-                Discovery
+                Back Home
             </Link>
         </div>
       </div>

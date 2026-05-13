@@ -3,8 +3,13 @@ import { useLoaderData, useNavigate, Link, Form, useNavigation, useActionData } 
 import { ticketApi } from '../api';
 
 export async function loader({ params }) {
-  const payment = await ticketApi.getPaymentById(params.registrationId);
-  return { payment, registrationId: params.registrationId };
+  if (!ticketApi || typeof ticketApi.getPaymentById !== 'function') {
+    console.error('ticketApi.getPaymentById is missing or not a function');
+    throw new Error('Internal Configuration Error: Payment API not initialized correctly.');
+  }
+  
+  const payment = await ticketApi.getPaymentById(params.paymentId);
+  return { payment };
 }
 
 export async function action({ params, request }) {
@@ -12,7 +17,7 @@ export async function action({ params, request }) {
   const idempotencyKey = formData.get('idempotencyKey');
 
   try {
-    const result = await ticketApi.confirmPayment(params.registrationId, idempotencyKey);
+    const result = await ticketApi.confirmPayment(params.paymentId, idempotencyKey);
     return result;
   } catch (err) {
     console.error('Payment failed', err);
@@ -38,7 +43,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (actionData?.success) {
-      navigate(`/payment/success?ticketId=${actionData.ticket_id}`);
+      navigate('/payment/success', { state: { ticketId: actionData.ticket_id } });
     } else if (actionData?.success === false) {
       navigate('/payment/failure', { state: { error: actionData.message || 'Payment failed' } });
     }
@@ -216,16 +221,9 @@ export default function CheckoutPage() {
                 </div>
 
                 {error && (
-                  <div className="mt-6 p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest flex flex-col gap-3 font-mono">
-                    <div className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                      ERROR: {error}
-                    </div>
-                    {error.includes('expired') || error.includes('not found') ? (
-                      <Link to="/" className="text-cyan-500 hover:underline decoration-cyan-500/30">
-                        &gt; RESTART_REGISTRATION_FLOW
-                      </Link>
-                    ) : null}
+                  <div className="mt-6 p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest flex items-center gap-3 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    ERROR: {error}
                   </div>
                 )}
 
