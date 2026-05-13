@@ -5,6 +5,13 @@ import ViewModeToggle from '@/components/ViewModeToggle';
 import WorkshopCardView from './components/WorkshopCardView';
 import WorkshopListView from './components/WorkshopListView';
 import WorkshopCompactView from './components/WorkshopCompactView';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
