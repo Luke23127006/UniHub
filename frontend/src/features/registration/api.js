@@ -57,11 +57,6 @@ export const MOCK_TICKETS = [
   }
 ];
 
-function authHeaders() {
-  const token = localStorage.getItem('auth_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
 export const ticketApi = {
   async list() {
     const response = await fetch('/api/v1/tickets/my-tickets', { headers: authHeaders() });
