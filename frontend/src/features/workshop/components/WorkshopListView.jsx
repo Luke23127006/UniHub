@@ -26,7 +26,7 @@ function SeatsPill({ capacity, available }) {
 
   return (
     <span className={`text-xs font-mono font-bold ${color} tracking-tighter`}>
-      {isFull ? 'FULL' : `${capacity - available}/${capacity}`}
+      {isFull ? 'FULL' : `${available}/${capacity}`}
     </span>
   );
 }
@@ -67,12 +67,12 @@ export default function WorkshopListView({ workshops }) {
             <div className="min-w-0">
               <Link
                 to={`/workshops/${w.id}`}
-                className="block font-semibold text-unihub-text dark:text-gray-100 hover:text-unihub-primary dark:hover:text-unihub-gold truncate"
+                className="block font-black text-sm text-gray-900 dark:text-gray-100 hover:text-cyan-500 uppercase tracking-tighter truncate transition-colors"
               >
                 {w.title}
               </Link>
-              <p className="text-xs text-unihub-muted dark:text-gray-400 truncate mt-0.5">
-                {w.speakers.map((s) => s.full_name).join(', ') || 'TBA'}
+              <p className="text-[10px] text-gray-400 font-medium italic truncate mt-1">
+                {w.speakers.map((s) => s.full_name).join(', ') || 'Staff Personnel TBA'}
               </p>
             </div>
 
@@ -83,9 +83,9 @@ export default function WorkshopListView({ workshops }) {
             </div>
 
             {/* Room */}
-            <div className="text-sm text-unihub-muted dark:text-gray-400">
-              <p className="font-medium text-unihub-text dark:text-gray-300">{w.room?.room_code ?? 'TBA'}</p>
-              <p className="text-xs truncate">{w.room?.building ?? 'TBA'}</p>
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              <p className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-tighter">{w.room?.room_code ?? 'TBA'}</p>
+              <p className="text-[10px] text-gray-400 truncate mt-0.5">{w.room?.building ?? 'TBA'}</p>
             </div>
 
             {/* Seats */}
@@ -103,26 +103,20 @@ export default function WorkshopListView({ workshops }) {
               <span className={`text-[11px] font-black font-mono ${w.is_paid ? 'text-amber-600' : 'text-cyan-600'}`}>
                 {formatPrice(w.price, w.currency)}
               </span>
-              {w.available_seats === 0 || w.status !== 'published' ? (
-                <span
-                  aria-disabled="true"
-                  className="relative block overflow-hidden opacity-20 cursor-not-allowed"
-                >
-                  <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm">
-                    {w.status === 'cancelled' || w.status === 'completed' || w.status === 'draft' ? '—' : 'Full'}
-                  </div>
-                </span>
-              ) : (
-                <Link
-                  to={`/workshops/${w.id}/register`}
-                  className="relative group/btn overflow-hidden transition-all duration-300"
-                >
-                  <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm group-hover/btn:shadow-md transition-shadow">
-                    <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
-                    Entry
-                  </div>
-                </Link>
-              )}
+              <Link
+                to={`/workshops/${w.id}/register`}
+                className={`relative group/btn overflow-hidden transition-all duration-300 ${
+                  w.available_seats === 0 || w.status !== 'published' ? 'pointer-events-none opacity-20' : ''
+                }`}
+              >
+                <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm group-hover/btn:shadow-md transition-shadow">
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
+                  
+                  {w.status === 'cancelled' || w.status === 'completed' || w.status === 'draft' ? '—' : 
+                   w.available_seats === 0 ? 'Full' : 'Entry'}
+                </div>
+              </Link>
             </div>
           </li>
         ))}
