@@ -117,24 +117,17 @@ export const ticketApi = {
   },
 
   async getPaymentById(paymentId) {
-    try {
-      const response = await fetch(`/api/v1/payments/${paymentId}`, {
-        headers: authHeaders(),
-      });
-      if (!response.ok) throw response;
-      return await response.json();
-    } catch {
-      return {
-        id: paymentId,
-        amount: 50000,
-        currency: "VND",
-        workshop: {
-          title: "Professional Workshop",
-          room: { room_code: "A-101", building: "Main Hall" },
-        },
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      };
-    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      id: paymentId,
+      amount: 50000,
+      currency: 'VND',
+      workshop: {
+        title: 'Professional Workshop',
+        room: { room_code: 'A-101', building: 'Main Hall' }
+      },
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    };
   },
 
   async confirmPayment(paymentId, idempotencyKey) {
