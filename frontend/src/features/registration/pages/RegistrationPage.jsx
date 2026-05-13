@@ -27,6 +27,24 @@ export async function action({ params, request }) {
   }
 }
 
+export async function action({ params, request }) {
+  const formData = await request.formData();
+  const idempotencyKey = formData.get('idempotencyKey');
+
+  try {
+    const result = await ticketApi.register(params.id, idempotencyKey);
+    
+    if (result.requires_payment) {
+      return redirect(`/checkout/${result.payment_id}`);
+    } else {
+      return redirect(`/my-tickets/${result.id}`);
+    }
+  } catch (err) {
+    console.error('Registration failed', err);
+    return { error: 'Registration failed. Please try again later.' };
+  }
+}
+
 function formatDateTime(value) {
   if (!value) return 'TBA';
   return new Date(value).toLocaleString('en-GB', {
@@ -47,6 +65,12 @@ function formatPrice(price, currency) {
 export default function RegistrationPage() {
   const { workshop } = useLoaderData();
   const navigate = useNavigate();
+  const actionData = useActionData();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === 'submitting';
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+
+  const error = actionData?.error;
   const actionData = useActionData();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
@@ -163,7 +187,7 @@ export default function RegistrationPage() {
                   <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
                   <button
                     type="submit"
-                    disabled={isSubmitting || workshop.available_seats <= 0 || workshop.status !== 'published'}
+                    disabled={isSubmitting || workshop.available_seats <= 0}
                     className="w-full relative group active:scale-[0.98] transition-all duration-200"
                   >
                     <div className={`relative flex items-center justify-center py-5 px-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.3em] text-[11px] transition-all duration-300 ${isSubmitting ? 'opacity-80' : 'hover:shadow-2xl shadow-gray-200 dark:shadow-none'}`}>
@@ -179,7 +203,6 @@ export default function RegistrationPage() {
                             Finalizing...
                           </>
                         ) : (
-                          workshop.status !== 'published' ? 'Registration Unavailable' :
                           workshop.available_seats > 0 ? 'Complete Registration' : 'Workshop Full'
                         )}
                       </span>
