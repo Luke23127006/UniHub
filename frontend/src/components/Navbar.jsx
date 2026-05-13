@@ -68,9 +68,9 @@ export default function Navbar() {
           </button>
 
           {/* Sign-in button */}
-          <button className="bg-unihub-gold text-unihub-text hover:bg-yellow-400 dark:hover:bg-yellow-300 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors">
+          <Link to="/login" className="bg-unihub-gold text-unihub-text hover:bg-yellow-400 dark:hover:bg-yellow-300 px-4 py-1.5 rounded-md text-sm font-semibold transition-colors">
             Sign In
-          </button>
+          </Link>
         </div>
       </nav>
     </header>
