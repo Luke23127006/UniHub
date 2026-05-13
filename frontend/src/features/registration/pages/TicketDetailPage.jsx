@@ -188,8 +188,8 @@ export default function TicketDetailPage() {
             {/* Right Section: QR Stub */}
             <div className="w-full md:w-64 bg-gray-50/50 dark:bg-gray-800/30 p-6 flex flex-col items-center justify-center relative">
 
-              {/* Optimized scan animation */}
-              {!isCancelled && (
+              {/* Optimized scan animation - Only active for valid tickets */}
+              {ticket.status === 'CONFIRMED' && (
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/90 to-transparent animate-[scan_3s_linear_infinite] will-change-[top,opacity] z-20 print:hidden"></div>
               )}
 
@@ -199,20 +199,30 @@ export default function TicketDetailPage() {
                 <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-cyan-500/30 rounded-bl-sm"></div>
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-500/30 rounded-br-sm"></div>
 
-                <div className="bg-white p-2 rounded-lg shadow-sm">
+                <div className={`bg-white p-2 rounded-lg shadow-sm transition-opacity duration-500 ${ticket.status !== 'CONFIRMED' ? 'opacity-40 grayscale' : 'opacity-100'}`}>
                   <QRCodeSVG
-                    value={ticket.id}
+                    value={ticket.checkin_token || ticket.id}
                     size={100}
                     level="M"
-                    fgColor={isCancelled ? "#94a3b8" : "#0f172a"}
+                    fgColor={ticket.status === 'CONFIRMED' ? "#0f172a" : "#94a3b8"}
                   />
+                  {ticket.status !== 'CONFIRMED' && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="bg-white/90 px-2 py-1 rounded text-[8px] font-black text-rose-500 border border-rose-200 uppercase tracking-tighter">INVALID</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="text-center">
-                <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.3em] mb-1 pb-0.5">SCAN FOR CHECK-IN</p>
-                <p className="text-[7px] font-mono text-gray-400 uppercase tracking-widest pb-0.5">UNIHUB AUTHENTICATED</p>
+                <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-1 pb-0.5 ${ticket.status === 'CONFIRMED' ? 'text-cyan-600 dark:text-cyan-400' : 'text-gray-400'}`}>
+                  {ticket.status === 'CONFIRMED' ? 'READY FOR CHECK-IN' : 'WAITING FOR CONFIRMATION'}
+                </p>
+                <p className="text-[7px] font-mono text-gray-400 uppercase tracking-widest pb-0.5">
+                  {ticket.status === 'CONFIRMED' ? 'UNIHUB AUTHENTICATED' : 'NOT VALID FOR ENTRY'}
+                </p>
               </div>
+
             </div>
           </div>
         </div>
