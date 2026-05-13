@@ -186,6 +186,11 @@ export default function TicketDetailPage() {
                     level="H"
                     fgColor={isCancelled ? "#94a3b8" : "#0f172a"}
                   />
+                  {ticket.status !== 'CONFIRMED' && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="bg-white/90 px-2 py-1 rounded text-[8px] font-black text-rose-500 border border-rose-200 uppercase tracking-tighter">INVALID</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
