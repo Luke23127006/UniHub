@@ -32,18 +32,19 @@ describe('TicketDetailPage', () => {
 
     expect(screen.getByText('Workshop Access Pass')).toBeInTheDocument();
     expect(screen.getByText(mockTicket.workshop.title)).toBeInTheDocument();
-    expect(screen.getByText(mockTicket.id)).toBeInTheDocument();
+    // Match ID with prefix #
+    expect(screen.getByText(new RegExp(`#${mockTicket.id}`, 'i'))).toBeInTheDocument();
     expect(screen.getByText(mockTicket.workshop.room.room_code)).toBeInTheDocument();
   });
 
-  it('shows cancelled banner for a cancelled ticket', () => {
+  it('shows cancelled badge for a cancelled ticket', () => {
     const cancelledTicket = MOCK_TICKETS.find(t => t.status === 'CANCELLED');
     useLoaderData.mockReturnValue(cancelledTicket);
 
     renderPage();
 
-    // The component shows a "Cancelled" banner in this case
-    expect(screen.getByText('Cancelled')).toBeInTheDocument();
+    // The new UI displays the status in uppercase as returned by the API
+    expect(screen.getByText('CANCELLED')).toBeInTheDocument();
   });
 
   it('shows error state when ticket is not found', () => {
@@ -51,8 +52,9 @@ describe('TicketDetailPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Ticket not found')).toBeInTheDocument();
-    expect(screen.getByText(/Go back to My Tickets/i)).toBeInTheDocument();
+    // New labels: 'System Error: Ticket Not Found' and 'Return to Terminal'
+    expect(screen.getByText(/System Error: Ticket Not Found/i)).toBeInTheDocument();
+    expect(screen.getByText(/Return to Terminal/i)).toBeInTheDocument();
   });
 
   it('displays the QR code for check-in', () => {
