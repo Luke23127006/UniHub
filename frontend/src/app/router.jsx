@@ -3,6 +3,7 @@ import ErrorPage from '@/components/ErrorPage';
 import { authRoutes } from '@/features/auth/routes';
 import { workshopRoutes } from '@/features/workshop/routes';
 import { registrationRoutes } from '@/features/registration/routes';
+import { registrationRoutes } from '@/features/registration/routes';
 import RootLayout from './layouts/RootLayout';
 
 function requireAuth() {
@@ -45,15 +46,6 @@ export const router = createBrowserRouter([
     path: '/',
     element: <RootLayout />,
     errorElement: <ErrorPage />,
-    children: [
-      ...workshopRoutes,
-      ...authRoutes,
-      {
-        loader: requireAuth,
-        children: registrationRoutes,
-      },
-      { path: '403', element: <ForbiddenPage /> },
-      { path: '*', element: <NotFoundPage /> },
-    ],
+    children: [...workshopRoutes, ...authRoutes, ...registrationRoutes],
   },
 ]);
