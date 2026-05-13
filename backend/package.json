@@ -1,7 +1,7 @@
 {
   "scripts": {
     "postinstall": "prisma generate --schema src/prisma/schema.prisma",
-    "dev": "nodemon server.js",
+    "dev": "nodemon -L server.js",
     "start": "node server.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
