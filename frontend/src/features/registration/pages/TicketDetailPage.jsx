@@ -29,37 +29,6 @@ function formatPrice(price, currency) {
 export default function TicketDetailPage() {
   const ticket = useLoaderData();
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownload = async () => {
-    const node = document.getElementById('ticket-pass');
-    if (!node) {
-      console.error('Element #ticket-pass not found');
-      return;
-    }
-
-    try {
-      // Use html2canvas for the most reliable DOM-to-Image conversion
-      const canvas = await html2canvas(node, {
-        backgroundColor: '#ffffff',
-        scale: 3, // Very high quality for printing
-        logging: false,
-        useCORS: true,
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `UniHub-Ticket-${ticket.id}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Download failed:', err);
-      alert('Không thể tạo ảnh vé. Bạn vui lòng sử dụng nút Print và chọn "Lưu thành PDF" nhé!');
-    }
-  };
-
   if (!ticket) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -78,7 +47,7 @@ export default function TicketDetailPage() {
   }
 
   const isCancelled = ticket.status === 'CANCELLED';
-  const accentColor = isCancelled ? 'rose' : ticket.status === 'PENDING' ? 'amber' : 'cyan';
+  const accentColor = isCancelled ? 'gray' : 'cyan';
 
   // Static class maps — Tailwind's scanner cannot detect runtime-interpolated class names.
   const accentGlow = isCancelled
@@ -90,18 +59,18 @@ export default function TicketDetailPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)] py-12 px-4 overflow-hidden">
-
-      {/* Background Tech Elements - Optimized for performance */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-10 dark:opacity-20 print:hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:48px_48px]"></div>
-        <div className="absolute top-20 left-10 w-48 h-48 bg-cyan-500/10 rounded-full blur-[60px]"></div>
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px]"></div>
+      
+      {/* Background Tech Elements */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-20 dark:opacity-40">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:32px_32px]"></div>
+        <div className="absolute top-20 left-10 w-64 h-64 bg-cyan-500/20 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-64 h-64 bg-purple-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      <div className="max-w-4xl mx-auto relative z-10 print:max-w-none print:m-0">
-
-        {/* HUD Navigation - Hidden during print */}
-        <div className="flex items-center justify-between mb-8 print:hidden">
+      <div className="max-w-xl mx-auto relative z-10">
+        
+        {/* HUD Navigation */}
+        <div className="flex items-center justify-between mb-8">
           <Link to="/my-tickets" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 hover:text-cyan-500 transition-colors">
             <span className="w-8 h-px bg-gray-300 dark:bg-gray-700"></span>
             ESC / BACK
@@ -112,27 +81,24 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* The Digital Boarding Pass */}
-        <div id="ticket-pass" className={`relative group transition-all duration-500 print:opacity-100 print:grayscale-0 ${isCancelled ? 'opacity-70 grayscale-[0.3]' : ''}`}>
+        {/* The Digital Pass */}
+        <div className={`relative group transition-all duration-500 ${isCancelled ? 'opacity-70 grayscale-[0.3]' : ''}`}>
+          
+          {/* Glowing Border Wrapper */}
+          <div className={`absolute -inset-0.5 bg-gradient-to-br from-${accentColor}-500/50 to-purple-600/50 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000`}></div>
+          
+          <div className="relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] shadow-2xl overflow-hidden">
+            
+            {/* Top Bar Decoration */}
+            <div className={`h-1.5 w-full bg-gradient-to-r from-${accentColor}-500 via-${accentColor}-400 to-transparent`}></div>
 
-          {/* Subtle Glow - Optimized */}
-          <div className={`absolute -inset-0.5 bg-gradient-to-br ${accentGlow} to-purple-600/30 rounded-[2rem] blur-sm opacity-10 group-hover:opacity-20 transition duration-500 print:hidden`}></div>
-
-          <div className="relative flex flex-col md:flex-row bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-xl overflow-hidden print:shadow-none print:border-gray-300">
-
-            {/* Left Section: Info (70%) */}
-            <div className="flex-[2] p-6 sm:p-8 border-b md:border-b-0 md:border-r border-dashed border-gray-200 dark:border-gray-800 relative">
-
-              {/* Perforated circles */}
-              <div className="hidden md:block absolute -right-3 top-0 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
-              <div className="hidden md:block absolute -right-3 bottom-0 translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
-
-              {/* Header */}
-              <div className="flex justify-between items-start mb-8">
+            {/* Content Area */}
+            <div className="p-8 sm:p-10">
+              <div className="flex justify-between items-start mb-10">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${accentDot}`}></span>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Workshop Access Pass</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={`w-2 h-2 rounded-full bg-${accentColor}-500 shadow-[0_0_8px_rgba(34,211,238,0.8)]`}></span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Workshop Access Pass</span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter">
                     {ticket.workshop.title}
@@ -169,12 +135,8 @@ export default function TicketDetailPage() {
                   <p className="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest flex items-center gap-1.5 pb-0.5">
                     <span className="w-1 h-1 bg-gray-300 dark:bg-gray-700"></span> Identity
                   </p>
-                  <p className="text-[11px] font-bold text-gray-900 dark:text-white uppercase leading-normal pb-0.5">
-                    {ticket.student?.full_name ?? 'Student Member'}
-                  </p>
-                  <p className="text-[9px] text-gray-500 font-mono leading-normal pb-0.5">
-                    {ticket.student?.email ?? ticket.student_email ?? '—'}
-                  </p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white uppercase">{ticket.workshop.room?.room_code}</p>
+                  <p className="text-[10px] text-gray-500 font-mono truncate">{ticket.workshop.room?.building}</p>
                 </div>
 
                 <div className="space-y-1">
@@ -197,78 +159,64 @@ export default function TicketDetailPage() {
               </div>
             </div>
 
-            {/* Right Section: QR Stub */}
-            <div className="w-full md:w-64 bg-gray-50/50 dark:bg-gray-800/30 p-6 flex flex-col items-center justify-center relative">
-
-              {/* Optimized scan animation - Only active for valid tickets */}
-              {ticket.status === 'CONFIRMED' && (
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/90 to-transparent animate-[scan_3s_linear_infinite] will-change-[top,opacity] z-20 print:hidden"></div>
+            {/* Bottom Section: Scanning HUD */}
+            <div className="relative bg-gray-50/50 dark:bg-gray-800/30 p-10 pb-12 flex flex-col items-center">
+              
+              {/* Animated scanning line */}
+              {!isCancelled && (
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent animate-[scan_3s_linear_infinite] z-20"></div>
               )}
+              
+              {/* Perforated edge effect */}
+              <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
+              <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 z-10"></div>
 
-              <div className="relative p-4 mb-4">
-                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-cyan-500/30 rounded-tl-sm"></div>
-                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-cyan-500/30 rounded-tr-sm"></div>
-                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-cyan-500/30 rounded-bl-sm"></div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-500/30 rounded-br-sm"></div>
+              {/* QR Code with Tech Frame */}
+              <div className="relative p-6">
+                {/* Corner markers */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-cyan-500/40 rounded-tl-lg"></div>
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-cyan-500/40 rounded-tr-lg"></div>
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-cyan-500/40 rounded-bl-lg"></div>
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-cyan-500/40 rounded-br-lg"></div>
 
-                <div className={`bg-white p-2 rounded-lg shadow-sm transition-opacity duration-500 ${ticket.status !== 'CONFIRMED' ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-                  {ticket.checkin_token ? (
-                    <QRCodeSVG
-                      value={ticket.checkin_token}
-                      size={100}
-                      level="M"
-                      fgColor={ticket.status === 'CONFIRMED' ? "#0f172a" : "#94a3b8"}
-                    />
-                  ) : (
-                    <div className="w-[100px] h-[100px] flex items-center justify-center">
-                      <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest text-center leading-relaxed">
-                        QR pending
-                      </span>
-                    </div>
-                  )}
-                  {ticket.status !== 'CONFIRMED' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="bg-white/90 px-2 py-1 rounded text-[8px] font-black text-rose-500 border border-rose-200 uppercase tracking-tighter">INVALID</span>
-                    </div>
-                  )}
+                <div className="bg-white p-3 rounded-xl shadow-[0_0_30px_rgba(34,211,238,0.1)]">
+                  <QRCodeSVG 
+                    value={ticket.id} 
+                    size={160} 
+                    level="H"
+                    fgColor={isCancelled ? "#94a3b8" : "#0f172a"}
+                  />
                 </div>
               </div>
 
-              <div className="text-center">
-                <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-1 pb-0.5 ${ticket.status === 'CONFIRMED' ? 'text-cyan-600 dark:text-cyan-400' : 'text-gray-400'}`}>
-                  {ticket.status === 'CONFIRMED' ? 'READY FOR CHECK-IN' : 'WAITING FOR CONFIRMATION'}
-                </p>
-                <p className="text-[7px] font-mono text-gray-400 uppercase tracking-widest pb-0.5">
-                  {ticket.status === 'CONFIRMED' ? 'UNIHUB AUTHENTICATED' : 'NOT VALID FOR ENTRY'}
-                </p>
+              <div className="mt-8 text-center">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-2">SCAN FOR CHECK-IN</p>
+                <div className="flex items-center gap-4 text-[8px] font-mono text-gray-400 uppercase tracking-widest">
+                  <span className="w-12 h-px bg-gray-300 dark:bg-gray-700"></span>
+                  UNIHUB AUTHENTICATED
+                  <span className="w-12 h-px bg-gray-300 dark:bg-gray-700"></span>
+                </div>
               </div>
 
             </div>
           </div>
         </div>
 
-        {/* Bottom Actions - Hidden during print */}
-        <div className="mt-8 grid grid-cols-2 gap-4 print:hidden">
-          <button
-            onClick={handlePrint}
-            className="flex items-center justify-center gap-3 py-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-95"
-          >
+        {/* Bottom Actions */}
+        <div className="mt-12 grid grid-cols-2 gap-4">
+          <button className="flex items-center justify-center gap-3 py-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
             Print
           </button>
-          <button
-            onClick={handleDownload}
-            className="flex items-center justify-center gap-3 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity active:scale-95"
-          >
+          <button className="flex items-center justify-center gap-3 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-xl shadow-gray-900/10 dark:shadow-white/5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Download
           </button>
         </div>
       </div>
-
-      {/* Global CSS - Optimized */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
+      
+      {/* Global CSS for scanning animation */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes scan {
           0% { top: 0; opacity: 0; }
           20% { opacity: 0.3; }
