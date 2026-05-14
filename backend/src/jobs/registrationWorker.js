@@ -2,15 +2,30 @@ const { getChannel } = require('../config/rabbitmq');
 const RedisLock = require('../utils/redisLock');
 const WorkshopService = require('../services/workshopService');
 
-// Must comfortably exceed the worst-case processRegistration duration
-// (DB transaction + index contention under full load). Tune upward if profiling
-// shows P99 transaction times approaching this value.
 const LOCK_TTL_MS = 30_000;
-
-// How long to wait before requeuing a message when the lock is already held.
-// Without this pause, a worker that loses the race immediately NACKs and
-// RabbitMQ redelivers, creating a tight busy-loop under contention.
 const LOCK_RETRY_DELAY_MS = 500;
+
+const REGISTRATION_QUEUE = 'workshop_registration_queue';
+const REGISTRATION_DLQ = 'workshop_registration_dlq';
+
+async function sendToDlq(channel, originalPayload, errorMessage) {
+  try {
+    await channel.assertQueue(REGISTRATION_DLQ, { durable: true });
+    const dlqPayload = {
+      ...originalPayload,
+      _error: errorMessage,
+      _failedAt: new Date().toISOString(),
+    };
+    channel.sendToQueue(
+      REGISTRATION_DLQ,
+      Buffer.from(JSON.stringify(dlqPayload)),
+      { persistent: true }
+    );
+    console.error(`[DLQ] Routed failed registration to ${REGISTRATION_DLQ}:`, dlqPayload);
+  } catch (dlqErr) {
+    console.error('[DLQ] Failed to publish to dead-letter queue:', dlqErr.message, 'Original payload:', originalPayload);
+  }
+}
 
 async function processRegistrationMessage(msg, channel) {
   if (!msg) return;
@@ -42,11 +57,10 @@ async function processRegistrationMessage(msg, channel) {
     channel.ack(msg);
   } catch (error) {
     console.error('Error processing registration:', error.message);
-    // NACK without requeue for deterministic business errors (duplicate, not found).
-    // Consider routing to a Dead Letter Queue for observability in production.
+    // Send to DLQ so the failure is persisted and observable before discarding.
+    await sendToDlq(channel, payload, error.message);
     channel.nack(msg, false, false);
   } finally {
-    // Token-gated release: safe even if the TTL expired mid-processing.
     await RedisLock.releaseLock(lockKey, lockToken);
   }
 }
@@ -54,14 +68,13 @@ async function processRegistrationMessage(msg, channel) {
 async function startRegistrationWorker() {
   try {
     const channel = getChannel();
-    const queueName = 'workshop_registration_queue';
 
-    await channel.assertQueue(queueName, { durable: true });
-    channel.prefetch(1); // One in-flight message per worker instance
+    await channel.assertQueue(REGISTRATION_QUEUE, { durable: true });
+    channel.prefetch(1);
 
-    console.log(`[*] Waiting for messages in ${queueName}. To exit press CTRL+C`);
+    console.log(`[*] Waiting for messages in ${REGISTRATION_QUEUE}. To exit press CTRL+C`);
 
-    channel.consume(queueName, async (msg) => {
+    channel.consume(REGISTRATION_QUEUE, async (msg) => {
       await processRegistrationMessage(msg, channel);
     }, { noAck: false });
   } catch (error) {

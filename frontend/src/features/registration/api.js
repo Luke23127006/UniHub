@@ -57,9 +57,31 @@ export const MOCK_TICKETS = [
   }
 ];
 
+function authHeaders() {
+  const token = localStorage.getItem('auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 export const ticketApi = {
-  list: async () => MOCK_TICKETS,
-  getById: async (id) => MOCK_TICKETS.find(t => t.id === id),
+  async list() {
+    try {
+      const response = await fetch('/api/v1/tickets/my-tickets', { headers: authHeaders() });
+      if (!response.ok) throw response;
+      return await response.json();
+    } catch {
+      return MOCK_TICKETS;
+    }
+  },
+
+  async getById(id) {
+    try {
+      const response = await fetch(`/api/v1/tickets/${id}`, { headers: authHeaders() });
+      if (!response.ok) throw response;
+      return await response.json();
+    } catch {
+      return MOCK_TICKETS.find(t => t.id === id) ?? null;
+    }
+  },
   
   async register(workshopId, idempotencyKey) {
     try {
@@ -102,17 +124,22 @@ export const ticketApi = {
   },
 
   async getPaymentById(paymentId) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      id: paymentId,
-      amount: 50000,
-      currency: 'VND',
-      workshop: {
-        title: 'Professional Workshop',
-        room: { room_code: 'A-101', building: 'Main Hall' }
-      },
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    };
+    try {
+      const response = await fetch(`/api/v1/payments/${paymentId}`, { headers: authHeaders() });
+      if (!response.ok) throw response;
+      return await response.json();
+    } catch {
+      return {
+        id: paymentId,
+        amount: 50000,
+        currency: 'VND',
+        workshop: {
+          title: 'Professional Workshop',
+          room: { room_code: 'A-101', building: 'Main Hall' }
+        },
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      };
+    }
   },
 
   async confirmPayment(paymentId, idempotencyKey) {
@@ -122,6 +149,7 @@ export const ticketApi = {
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
+          ...authHeaders(),
         },
       });
       

@@ -2,23 +2,25 @@ const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
 const verifyOwner = require('../middlewares/ownerMiddleware');
-const RegistrationController = require('../controllers/registrationController');
+const RegistrationController = require('../controllers/registration.controller');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
+const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
 
 const router = Router();
 
 // POST /v1/tickets/register
-// Three guards: authenticated → Student role → rate limiter (anti-flood)
+// Guards: authenticated → Student role → rate limiter → idempotency check
 router.post(
   '/register',
   verifyToken,
   requireRoles(['Student']),
   workshopRegistrationLimiter,
+  checkIdempotency,
   RegistrationController.registerWorkshop
 );
 
 // GET /v1/tickets/:id/qr
-// Three guards: authenticated → Student role → must own this specific ticket (IDOR prevention)
+// Guards: authenticated → Student role → must own this specific ticket (IDOR prevention)
 router.get(
   '/:id/qr',
   verifyToken,
@@ -28,7 +30,7 @@ router.get(
 );
 
 // GET /v1/tickets/my-tickets
-// Two guards: authenticated → Student role (no ownership check – returns caller's own tickets)
+// Guards: authenticated → Student role (returns caller's own tickets)
 router.get(
   '/my-tickets',
   verifyToken,
