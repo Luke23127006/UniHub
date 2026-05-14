@@ -78,7 +78,14 @@ export default function TicketDetailPage() {
   }
 
   const isCancelled = ticket.status === 'CANCELLED';
-  const accentColor = isCancelled ? 'gray' : 'cyan';
+
+  // Static class maps — Tailwind's scanner cannot detect runtime-interpolated class names.
+  const accentGlow = isCancelled
+    ? 'from-gray-500/30'
+    : 'from-cyan-500/30';
+  const accentDot = isCancelled
+    ? 'bg-gray-500'
+    : 'bg-cyan-500';
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)] py-12 px-4 overflow-hidden">
@@ -108,7 +115,7 @@ export default function TicketDetailPage() {
         <div id="ticket-pass" className={`relative group transition-all duration-500 print:opacity-100 print:grayscale-0 ${isCancelled ? 'opacity-70 grayscale-[0.3]' : ''}`}>
 
           {/* Subtle Glow - Optimized */}
-          <div className={`absolute -inset-0.5 bg-gradient-to-br from-${accentColor}-500/30 to-purple-600/30 rounded-[2rem] blur-sm opacity-10 group-hover:opacity-20 transition duration-500 print:hidden`}></div>
+          <div className={`absolute -inset-0.5 bg-gradient-to-br ${accentGlow} to-purple-600/30 rounded-[2rem] blur-sm opacity-10 group-hover:opacity-20 transition duration-500 print:hidden`}></div>
 
           <div className="relative flex flex-col md:flex-row bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-xl overflow-hidden print:shadow-none print:border-gray-300">
 
@@ -123,7 +130,7 @@ export default function TicketDetailPage() {
               <div className="flex justify-between items-start mb-8">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`w-1.5 h-1.5 rounded-full bg-${accentColor}-500`}></span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${accentDot}`}></span>
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Workshop Access Pass</span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter">
@@ -161,8 +168,12 @@ export default function TicketDetailPage() {
                   <p className="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest flex items-center gap-1.5 pb-0.5">
                     <span className="w-1 h-1 bg-gray-300 dark:bg-gray-700"></span> Identity
                   </p>
-                  <p className="text-[11px] font-bold text-gray-900 dark:text-white uppercase leading-normal pb-0.5">Student Member</p>
-                  <p className="text-[9px] text-gray-500 font-mono leading-normal pb-0.5">student@unihub.edu.vn</p>
+                  <p className="text-[11px] font-bold text-gray-900 dark:text-white uppercase leading-normal pb-0.5">
+                    {ticket.student?.full_name ?? 'Student Member'}
+                  </p>
+                  <p className="text-[9px] text-gray-500 font-mono leading-normal pb-0.5">
+                    {ticket.student?.email ?? ticket.student_email ?? '—'}
+                  </p>
                 </div>
 
                 <div className="space-y-1">
@@ -200,12 +211,20 @@ export default function TicketDetailPage() {
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-500/30 rounded-br-sm"></div>
 
                 <div className={`bg-white p-2 rounded-lg shadow-sm transition-opacity duration-500 ${ticket.status !== 'CONFIRMED' ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-                  <QRCodeSVG
-                    value={ticket.checkin_token || ticket.id}
-                    size={100}
-                    level="M"
-                    fgColor={ticket.status === 'CONFIRMED' ? "#0f172a" : "#94a3b8"}
-                  />
+                  {ticket.checkin_token ? (
+                    <QRCodeSVG
+                      value={ticket.checkin_token}
+                      size={100}
+                      level="M"
+                      fgColor={ticket.status === 'CONFIRMED' ? "#0f172a" : "#94a3b8"}
+                    />
+                  ) : (
+                    <div className="w-[100px] h-[100px] flex items-center justify-center">
+                      <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest text-center leading-relaxed">
+                        QR pending
+                      </span>
+                    </div>
+                  )}
                   {ticket.status !== 'CONFIRMED' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <span className="bg-white/90 px-2 py-1 rounded text-[8px] font-black text-rose-500 border border-rose-200 uppercase tracking-tighter">INVALID</span>

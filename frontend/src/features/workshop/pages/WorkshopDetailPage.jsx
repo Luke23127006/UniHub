@@ -101,26 +101,32 @@ export default function WorkshopDetailPage() {
                 <StatusBadge status={workshop.status} />
               </div>
               
-              <Link 
-                to={`/workshops/${workshop.id}/register`}
-                className={`relative group overflow-hidden ${seatsAvailable <= 0 ? 'pointer-events-none opacity-50' : ''}`}
-              >
-                <div className="relative flex items-center justify-center gap-4 py-4 px-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all duration-300 hover:shadow-2xl">
-                  {/* Shimmer Effect */}
-                  <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
-                  
-                  {seatsAvailable > 0 ? (
-                    <>
-                      Initialize Access
-                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </>
-                  ) : (
-                    'Capacity Reached'
-                  )}
-                </div>
-              </Link>
+              {seatsAvailable > 0 && workshop.status === 'published' ? (
+                <Link
+                  to={`/workshops/${workshop.id}/register`}
+                  className="relative group overflow-hidden"
+                >
+                  <div className="relative flex items-center justify-center gap-4 py-4 px-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all duration-300 hover:shadow-2xl">
+                    <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
+                    Initialize Access
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </div>
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className="relative block overflow-hidden opacity-50 cursor-not-allowed"
+                >
+                  <div className="relative flex items-center justify-center py-4 px-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px]">
+                    {seatsAvailable <= 0 ? 'Capacity Reached' :
+                     workshop.status === 'cancelled' ? 'Cancelled' :
+                     workshop.status === 'completed' ? 'Session Ended' :
+                     'Not Open'}
+                  </div>
+                </span>
+              )}
             </div>
           </div>
         </section>

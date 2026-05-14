@@ -103,20 +103,26 @@ export default function WorkshopListView({ workshops }) {
               <span className={`text-[11px] font-black font-mono ${w.is_paid ? 'text-amber-600' : 'text-cyan-600'}`}>
                 {formatPrice(w.price, w.currency)}
               </span>
-              <Link
-                to={`/workshops/${w.id}/register`}
-                className={`relative group/btn overflow-hidden transition-all duration-300 ${
-                  w.available_seats === 0 || w.status !== 'published' ? 'pointer-events-none opacity-20' : ''
-                }`}
-              >
-                <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm group-hover/btn:shadow-md transition-shadow">
-                  {/* Shimmer Effect */}
-                  <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
-                  
-                  {w.status === 'cancelled' || w.status === 'completed' || w.status === 'draft' ? '—' : 
-                   w.available_seats === 0 ? 'Full' : 'Entry'}
-                </div>
-              </Link>
+              {w.available_seats === 0 || w.status !== 'published' ? (
+                <span
+                  aria-disabled="true"
+                  className="relative block overflow-hidden opacity-20 cursor-not-allowed"
+                >
+                  <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm">
+                    {w.status === 'cancelled' || w.status === 'completed' || w.status === 'draft' ? '—' : 'Full'}
+                  </div>
+                </span>
+              ) : (
+                <Link
+                  to={`/workshops/${w.id}/register`}
+                  className="relative group/btn overflow-hidden transition-all duration-300"
+                >
+                  <div className="relative flex items-center justify-center py-2 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-black uppercase tracking-[0.2em] text-[9px] shadow-sm group-hover/btn:shadow-md transition-shadow">
+                    <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
+                    Entry
+                  </div>
+                </Link>
+              )}
             </div>
           </li>
         ))}

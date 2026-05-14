@@ -136,21 +136,29 @@ export default function WorkshopCardView({ workshops }) {
             <SeatsIndicator capacity={w.capacity} available={w.available_seats} />
 
             {/* CTA */}
-            <Link
-              to={`/workshops/${w.id}/register`}
-              className={`relative mt-2 group/btn overflow-hidden transition-all duration-300 ${
-                w.available_seats === 0 || w.status !== 'published' ? 'pointer-events-none opacity-40 grayscale' : ''
-              }`}
-            >
-              <div className="relative flex items-center justify-center py-3 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">
-                <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
-                
-                {w.status === 'cancelled' ? 'Cancelled' : 
-                 w.status === 'completed' ? 'Session Ended' : 
-                 w.status === 'draft' ? 'Not Open' : 
-                 w.available_seats === 0 ? 'Full Capacity' : 'Secure Entry'}
-              </div>
-            </Link>
+            {w.available_seats === 0 || w.status !== 'published' ? (
+              <span
+                aria-disabled="true"
+                className="relative mt-2 block overflow-hidden opacity-40 grayscale cursor-not-allowed"
+              >
+                <div className="relative flex items-center justify-center py-3 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">
+                  {w.status === 'cancelled' ? 'Cancelled' :
+                   w.status === 'completed' ? 'Session Ended' :
+                   w.status === 'draft' ? 'Not Open' :
+                   'Full Capacity'}
+                </div>
+              </span>
+            ) : (
+              <Link
+                to={`/workshops/${w.id}/register`}
+                className="relative mt-2 group/btn overflow-hidden transition-all duration-300"
+              >
+                <div className="relative flex items-center justify-center py-3 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">
+                  <div className="absolute inset-0 -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent"></div>
+                  Secure Entry
+                </div>
+              </Link>
+            )}
           </div>
         </article>
       ))}

@@ -29,11 +29,12 @@ async function main() {
     });
   }
 
-  // 3. Create the mock workshop (expected ID 1 by load test)
+  // 3. Create the mock workshop with a fixed ID so the load test always targets the right record.
   let workshop = await prisma.workshop.findUnique({ where: { id: BigInt(1) } });
   if (!workshop) {
     workshop = await prisma.workshop.create({
       data: {
+        id: BigInt(1),
         title: 'High-load Architecture Workshop',
         description: 'Mock workshop for load testing',
         room_id: room.id,
