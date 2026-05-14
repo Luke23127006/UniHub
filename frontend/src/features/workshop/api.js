@@ -42,17 +42,17 @@ export const workshopApi = {
     const query = new URLSearchParams(params || {}).toString();
 
     try {
-      const data = await fetchJson(`/api/workshops${query ? `?${query}` : ''}`);
+      const data = await fetchJson(`/api/v1/workshops${query ? `?${query}` : ''}`);
       return normalizeWorkshopList(data);
     } catch (error) {
-      console.warn('Using mock workshop data because /api/workshops is unavailable.', error);
+      console.warn('Using mock workshop data because /api/v1/workshops is unavailable.', error);
       return MOCK_WORKSHOPS;
     }
   },
 
   async getById(id) {
     try {
-      return normalizeWorkshop(await fetchJson(`/api/workshops/${id}`));
+      return normalizeWorkshop(await fetchJson(`/api/v1/workshops/${id}`));
     } catch (error) {
       const workshop = MOCK_WORKSHOPS.find((item) => String(item.id) === String(id));
       if (workshop) return normalizeWorkshop(workshop);

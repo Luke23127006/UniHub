@@ -63,8 +63,8 @@ describe('TicketDetailPage', () => {
 
     renderPage();
 
-    // Check if the QR area text exists
-    expect(screen.getByText('SCAN FOR CHECK-IN')).toBeInTheDocument();
+    // Check if the QR area text exists (confirmed ticket shows READY FOR CHECK-IN)
+    expect(screen.getByText('READY FOR CHECK-IN')).toBeInTheDocument();
     // In our test, QRCodeSVG is a component we don't necessarily need to test the internals of,
     // but we can check if it rendered (it's an SVG).
     const qrSvg = document.querySelector('svg');
