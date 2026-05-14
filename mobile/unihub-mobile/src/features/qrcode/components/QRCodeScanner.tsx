@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -9,16 +9,8 @@ import { ThemedView } from '@/components/themed-view';
 import { QRBoundingBox } from '@/components/ui/QRBoundingBox';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCheckin } from '../hooks/useCheckin';
-import { initDatabase } from '@/shared/utils/db';
-import { useLocalSearchParams } from 'expo-router';
 
-interface QRCodeScannerProps {
-  title?: string;
-  onBack?: () => void;
-}
-
-export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
+export default function QRCodeScanner() {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const { id: workshopId } = useLocalSearchParams();
@@ -28,8 +20,7 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
     null,
   );
   const [isScanning, setIsScanning] = useState(true);
-  const [zoom, setZoom] = useState(0); 
-  const isProcessing = useRef(false);
+  const [zoom, setZoom] = useState(0); // Standard state for zoom
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize DB and Pre-fetch
@@ -173,7 +164,7 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
 
           {/* Overlay UI */}
           <View 
-            style={[styles.overlay, { top: insets.top + 100 }]} 
+            style={[styles.overlay, { paddingTop: insets.top + 60 }]} 
             pointerEvents="none"
           >
             <ThemedText type="subtitle" style={styles.hint}>

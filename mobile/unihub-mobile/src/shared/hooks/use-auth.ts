@@ -1,56 +1,26 @@
 import { useState, useEffect } from 'react';
-import { AuthService } from '@/features/auth/services/AuthService';
 
 // Simulate global state
 let globalIsLoggedIn = false;
-let globalUser: any = null;
-let listeners: ((val: boolean, user: any) => void)[] = [];
+let listeners: Array<(val: boolean) => void> = [];
 
 export function useAuth() {
   const [isLoggedIn, setIsLoggedInState] = useState<boolean | null>(null);
-  const [user, setUserState] = useState<any>(null);
 
   useEffect(() => {
-    // Check if we have a token already saved
-    const checkAuth = async () => {
-      const token = await AuthService.getToken();
-      if (token) {
-        try {
-          const userData = await AuthService.getMe();
-          setLoggedIn(true, userData);
-        } catch (error) {
-          console.error('Auto-login failed:', error);
-          await AuthService.logout();
-          setLoggedIn(false, null);
-        }
-      } else {
-        setIsLoggedInState(false);
-        setUserState(null);
-      }
-    };
+    setIsLoggedInState(globalIsLoggedIn);
     
-    checkAuth();
-    
-    const listener = (val: boolean, u: any) => {
-      setIsLoggedInState(val);
-      setUserState(u);
-    };
+    const listener = (val: boolean) => setIsLoggedInState(val);
     listeners.push(listener);
     return () => {
       listeners = listeners.filter(l => l !== listener);
     };
   }, []);
 
-  const setLoggedIn = (val: boolean, userData: any = null) => {
+  const setLoggedIn = (val: boolean) => {
     globalIsLoggedIn = val;
-    globalUser = userData;
-    listeners.forEach(l => l(val, userData));
+    listeners.forEach(l => l(val));
   };
 
-  const logout = async () => {
-    await AuthService.logout();
-    setLoggedIn(false, null);
-  };
-
-  return { isLoggedIn, user, setLoggedIn, logout };
+  return { isLoggedIn, setLoggedIn };
 }
