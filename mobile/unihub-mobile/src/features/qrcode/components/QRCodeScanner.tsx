@@ -24,7 +24,9 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
   const { id: workshopId } = useLocalSearchParams();
   const { performCheckin, syncTicketsFromServer, syncCheckinsToServer } = useCheckin();
   const [scannedData, setScannedData] = useState<string | null>(null);
-  const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
+  const [bounds, setBounds] = useState<BarcodeScanningResult["bounds"] | null>(
+    null,
+  );
   const [isScanning, setIsScanning] = useState(true);
   const [zoom, setZoom] = useState(0); 
   const isProcessing = useRef(false);
@@ -48,13 +50,12 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
     setup();
   }, [workshopId, syncCheckinsToServer, syncTicketsFromServer]);
 
-  const pinchGesture = Gesture.Pinch()
-    .onUpdate((event) => {
-      // Sensitivity: change scale to zoom range
-      const newZoom = zoom + (event.scale - 1) * 0.05;
-      const clampedZoom = Math.max(0, Math.min(newZoom, 1));
-      runOnJS(setZoom)(clampedZoom);
-    });
+  const pinchGesture = Gesture.Pinch().onUpdate((event) => {
+    // Sensitivity: change scale to zoom range
+    const newZoom = zoom + (event.scale - 1) * 0.05;
+    const clampedZoom = Math.max(0, Math.min(newZoom, 1));
+    runOnJS(setZoom)(clampedZoom);
+  });
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
     if (isProcessing.current || !isScanning) return;
@@ -150,7 +151,7 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
             facing="back"
             onBarcodeScanned={isScanning ? handleBarcodeScanned : undefined}
             barcodeScannerSettings={{
-              barcodeTypes: ['qr'],
+              barcodeTypes: ["qr"],
             }}
             zoom={zoom}
           />
@@ -185,7 +186,9 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
           {/* Zoom Indicator */}
           <View style={[styles.zoomContainer, { bottom: insets.bottom + 140 }]}>
             <View style={styles.zoomBadge}>
-              <Text style={styles.zoomText}>{Math.round(zoom * 10 + 1) / 10}x</Text>
+              <Text style={styles.zoomText}>
+                {Math.round(zoom * 10 + 1) / 10}x
+              </Text>
             </View>
           </View>
 
@@ -212,44 +215,44 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   permissionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
     gap: 16,
   },
   permissionTitle: {
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   permissionText: {
-    textAlign: 'center',
-    color: '#8E8E93',
+    textAlign: "center",
+    color: "#8E8E93",
     marginBottom: 24,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 28,
   },
   buttonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    justifyContent: "flex-start",
+    alignItems: "center",
     paddingTop: 60,
   },
   hint: {
-    color: '#FFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    color: "#FFF",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
@@ -274,41 +277,40 @@ const styles = StyleSheet.create({
   subTitle: { fontSize: 9, fontWeight: '800', color: '#007AFF', letterSpacing: 1.5 },
   title: { fontSize: 16, fontWeight: '900', color: '#FFF', marginTop: 2 },
   rescanButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 30,
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   rescanText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   zoomContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 120,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   zoomBadge: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   zoomText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-
