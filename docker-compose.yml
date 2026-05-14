@@ -79,11 +79,9 @@ services:
       - rabbitmq
     networks:
       - unihub_network
-    command: npm run dev
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
-      - /usr/src/app/src/generated
 
   k6:
     image: grafana/k6:latest
