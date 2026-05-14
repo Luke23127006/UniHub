@@ -3,7 +3,6 @@
     "postinstall": "prisma generate --schema src/prisma/schema.prisma",
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:load": "k6 run src/tests/loadtest.js",
