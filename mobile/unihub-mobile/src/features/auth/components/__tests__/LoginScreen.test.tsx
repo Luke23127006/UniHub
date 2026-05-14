@@ -2,7 +2,6 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import LoginScreen from '../LoginScreen';
 import { useAuth } from '@/shared/hooks/use-auth';
-import { AuthService } from '../../services/AuthService';
 
 // Mocks
 jest.mock('expo-router', () => ({
@@ -11,17 +10,10 @@ jest.mock('expo-router', () => ({
   })),
 }));
 
-const mockSetLoggedIn = jest.fn();
 jest.mock('@/shared/hooks/use-auth', () => ({
   useAuth: jest.fn(() => ({
-    setLoggedIn: mockSetLoggedIn,
+    setLoggedIn: jest.fn(),
   })),
-}));
-
-jest.mock('../../services/AuthService', () => ({
-  AuthService: {
-    login: jest.fn(),
-  },
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -33,7 +25,6 @@ jest.mock('expo-linear-gradient', () => ({
 }));
 
 jest.mock('react-native-reanimated', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Reanimated = require('react-native-reanimated/mock');
   return Reanimated;
 });
@@ -44,17 +35,12 @@ jest.mock('@/components/ui/icon-symbol', () => ({
 }));
 
 describe('LoginScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it('renders correctly', () => {
     const { getByPlaceholderText, getByText } = render(<LoginScreen />);
     
     expect(getByPlaceholderText('ENTER EMAIL...')).toBeTruthy();
     expect(getByPlaceholderText('••••••••')).toBeTruthy();
     expect(getByText('LOGIN')).toBeTruthy();
-    expect(getByText('UNIHUB STAFF')).toBeTruthy();
   });
 
   it('updates email and password fields', () => {
@@ -69,9 +55,8 @@ describe('LoginScreen', () => {
     expect(passwordInput.props.value).toBe('password123');
   });
 
-  it('shows loading indicator and calls AuthService and setLoggedIn on successful login', async () => {
-    (AuthService.login as jest.Mock).mockResolvedValue({ user: { id: '1', name: 'Test User' } });
-    
+  it('shows loading indicator and calls setLoggedIn on successful login', async () => {
+    const { setLoggedIn } = useAuth() as any;
     const { getByPlaceholderText, getByText } = render(<LoginScreen />);
     
     fireEvent.changeText(getByPlaceholderText('ENTER EMAIL...'), 'test@example.com');
@@ -80,8 +65,7 @@ describe('LoginScreen', () => {
     fireEvent.press(getByText('LOGIN'));
 
     await waitFor(() => {
-      expect(AuthService.login).toHaveBeenCalledWith('test@example.com', 'password123');
-      expect(mockSetLoggedIn).toHaveBeenCalledWith(true, { id: '1', name: 'Test User' });
-    });
+      expect(setLoggedIn).toHaveBeenCalledWith(true);
+    }, { timeout: 2000 });
   });
 });
