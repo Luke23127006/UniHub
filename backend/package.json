@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --schema src/prisma/schema.prisma",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "test": "jest",
@@ -41,6 +41,6 @@
     "prisma": "^7.8.0"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node src/prisma/seed.js"
   }
 }

@@ -1,7 +1,6 @@
 const { CircuitBreaker, CircuitOpenError } = require('../utils/CircuitBreaker');
 
 const GATEWAY_URL = process.env.MOCK_PAYMENT_GATEWAY_URL || 'http://localhost:4000';
-// Keep well under the Redlock TTL (2 000 ms) so the gateway call never outlives the lock.
 const GATEWAY_TIMEOUT_MS = 1_000;
 
 const paymentCircuit = new CircuitBreaker({ failureThreshold: 3, recoveryTimeout: 15_000 });

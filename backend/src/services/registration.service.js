@@ -2,7 +2,7 @@ const prisma = require('../config/db');
 const redlock = require('../config/redlock');
 const paymentService = require('./paymentService');
 
-const LOCK_TTL_MS = 2_000;
+const LOCK_TTL_MS = 30_000;
 
 /**
  * Typed outcomes returned to the controller.
@@ -35,8 +35,11 @@ class RegistrationService {
     let lock;
     try {
       lock = await redlock.acquire([lockKey], LOCK_TTL_MS);
-    } catch {
-      throw Object.assign(new Error('Workshop is sold out'), { statusCode: 409 });
+    } catch (err) {
+      if (err?.name === 'ExecutionError') {
+        throw Object.assign(new Error('Workshop is busy, please retry shortly'), { statusCode: 409 });
+      }
+      throw Object.assign(new Error('Service temporarily unavailable'), { statusCode: 503 });
     }
 
     try {
@@ -50,6 +53,10 @@ class RegistrationService {
 
       if (!workshopMeta) {
         throw Object.assign(new Error('Workshop not found'), { statusCode: 404 });
+      }
+
+      if (workshopMeta.is_paid && workshopMeta.price == null) {
+        throw Object.assign(new Error('Workshop price is not configured'), { statusCode: 500 });
       }
 
       // Decide degradation once, outside the tx, so the tx commits exactly one
@@ -123,7 +130,11 @@ class RegistrationService {
         return { outcome: RegistrationOutcome.PAID_GATEWAY_ERROR, registrationId };
       }
     } finally {
-      await lock.release();
+      try {
+        await lock.release();
+      } catch (releaseErr) {
+        console.error('[RegistrationService] Failed to release workshop lock:', releaseErr.message);
+      }
     }
   }
 }

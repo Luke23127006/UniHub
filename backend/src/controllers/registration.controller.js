@@ -36,7 +36,12 @@ class RegistrationController {
 
       const result = await RegistrationService.registerForWorkshop(workshopId, req.user.id);
 
-      return OUTCOME_RESPONSES[result.outcome](res, result);
+      const outcomeResponse = OUTCOME_RESPONSES[result?.outcome];
+      if (!outcomeResponse) {
+        console.error('[RegistrationController] Unexpected registration outcome:', result?.outcome, result);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+      return outcomeResponse(res, result);
     } catch (error) {
       const status = error.statusCode ?? 500;
       if (status < 500) {

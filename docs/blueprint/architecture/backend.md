@@ -32,7 +32,6 @@ src/
 - **Chịu tải cao**: Tách biệt jobs và services giúp tối ưu hóa tài nguyên cho các tác vụ nặng.
 - **An toàn thanh toán**: middlewares chứa Circuit Breaker giúp hệ thống không bị sập dây chuyền (Cascading Failure) khi cổng thanh toán thứ 3 bị lỗi.
 - **Dễ Test**: Dù gộp việc truy vấn Database vào Service, chúng ta vẫn có thể dùng các thư viện như jest-mock-extended để mock toàn bộ Prisma Client, giúp unit test tầng nghiệp vụ một cách độc lập.
-- **An toàn thanh toán**: middlewares chứa Circuit Breaker giúp hệ thống không bị sập dây chuyền khi cổng thanh toán lỗi.
 
 ## 4. Ghi chú Quyết định Kiến trúc (ADR): Lược bỏ tầng Repository
 Bối cảnh: Trong các mô hình Layered Architecture truyền thống thường có tầng `repositories/` để tách biệt mã SQL/truy vấn khỏi tầng `services/`. Tuy nhiên, UniHub sử dụng Prisma ORM.
