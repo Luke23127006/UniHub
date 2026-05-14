@@ -63,6 +63,11 @@ export default function HomeScreen() {
         <ThemedText>
           {`Tap the Explore tab to learn more about what's included in this starter app.`}
         </ThemedText>
+        <Link href="/login" style={{ marginTop: 10 }}>
+          <ThemedText type="defaultSemiBold" style={{ color: '#007AFF' }}>
+            Go to Staff Login →
+          </ThemedText>
+        </Link>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
