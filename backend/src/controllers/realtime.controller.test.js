@@ -17,8 +17,9 @@ jest.mock('../config/db', () => ({
   workshop: { findMany: jest.fn() },
 }));
 
+const prisma = require('../config/db');
 const { redisSubscriber } = require('../config/redisPubSub');
-const { streamSeats } = require('./realtime.controller');
+const { streamSeats, getSeatsBatch } = require('./realtime.controller');
 
 // The handler is registered once at module load time. Capture it immediately here,
 // before any beforeEach/clearAllMocks wipes the mock's call history.
@@ -167,6 +168,51 @@ describe('streamSeats — Broadcasting', () => {
       messageHandler('seat_updates', '{bad json}')
     ).not.toThrow();
     expect(res.write).not.toHaveBeenCalled();
+  });
+});
+
+describe('getSeatsBatch', () => {
+  function makeBatchRes() {
+    return {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+  }
+
+  it('returns 400 when ids query param is absent', async () => {
+    const req = { query: {} };
+    const res = makeBatchRes();
+    await getSeatsBatch(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: expect.any(String) });
+  });
+
+  it('returns 400 when ids contains no valid positive integers', async () => {
+    const req = { query: { ids: 'abc,0,-1' } };
+    const res = makeBatchRes();
+    await getSeatsBatch(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('returns a string-keyed map of workshopId -> available_seats including BigInt id serialization', async () => {
+    prisma.workshop.findMany.mockResolvedValueOnce([
+      { id: BigInt(1), available_seats: 10 },
+      { id: BigInt(2), available_seats: 5 },
+    ]);
+    const req = { query: { ids: '1,2' } };
+    const res = makeBatchRes();
+    await getSeatsBatch(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ '1': 10, '2': 5 });
+  });
+
+  it('returns 500 when Prisma throws', async () => {
+    prisma.workshop.findMany.mockRejectedValueOnce(new Error('DB error'));
+    const req = { query: { ids: '1' } };
+    const res = makeBatchRes();
+    await getSeatsBatch(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: 'Internal server error' });
   });
 });
 

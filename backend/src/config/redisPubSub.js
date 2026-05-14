@@ -5,7 +5,7 @@ const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 // ioredis enters a dedicated "subscriber" mode the moment .subscribe() is called,
 // making that connection unable to issue regular commands (GET, SET, PUBLISH, etc.).
 // Two separate clients are required: one locked in subscriber mode to receive
-// seat_updated events, and one free to publish them.
+// seat_updates events, and one free to publish them.
 const redisPublisher = new Redis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,

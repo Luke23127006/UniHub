@@ -40,8 +40,9 @@ function streamSeats(req, res) {
   const raw = req.query.ids ?? '';
   const trackedWorkshopIds = raw
     .split(',')
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => !isNaN(n));
+    .map((s) => s.trim())
+    .filter((s) => /^[1-9]\d*$/.test(s))
+    .map(Number);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -60,23 +61,28 @@ async function getSeatsBatch(req, res) {
   const raw = req.query.ids ?? '';
   const ids = raw
     .split(',')
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => !isNaN(n) && n > 0);
+    .map((s) => s.trim())
+    .filter((s) => /^[1-9]\d*$/.test(s));
 
   if (ids.length === 0) {
     return res.status(400).json({ message: 'Query parameter "ids" must be a non-empty comma-separated list of workshop IDs.' });
   }
 
-  const workshops = await prisma.workshop.findMany({
-    where: { id: { in: ids.map(BigInt) } },
-    select: { id: true, available_seats: true },
-  });
+  try {
+    const workshops = await prisma.workshop.findMany({
+      where: { id: { in: ids.map(BigInt) } },
+      select: { id: true, available_seats: true },
+    });
 
-  const seats = Object.fromEntries(
-    workshops.map((w) => [w.id.toString(), w.available_seats])
-  );
+    const seats = Object.fromEntries(
+      workshops.map((w) => [w.id.toString(), w.available_seats])
+    );
 
-  return res.status(200).json(seats);
+    return res.status(200).json(seats);
+  } catch (err) {
+    console.error('[RealtimeController] getSeatsBatch error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
 module.exports = { streamSeats, getSeatsBatch };

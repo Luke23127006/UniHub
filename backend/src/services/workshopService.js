@@ -3,15 +3,12 @@ const { redisPublisher } = require('../config/redisPubSub');
 
 class WorkshopService {
   /**
-   * Processes a workshop registration transaction.
-   * Decrements available seats and creates a pending_payment Registration record.
+   * Returns all published workshops ordered by event day.
    *
-   * @param {number|string} userId
-   * @param {number|string} workshopId
-   * @returns {Promise<{success: boolean, message: string}>}
+   * @returns {Promise<Array<{id: string, title: string, event_day: Date, start_time: Date, end_time: Date, capacity: number, available_seats: number, is_paid: boolean, price: *, room: object, workshop_speakers: Array}>>}
    */
   static async getAllWorkshops() {
-    return prisma.workshop.findMany({
+    const workshops = await prisma.workshop.findMany({
       where: { status: 'published' },
       select: {
         id: true,
@@ -31,8 +28,15 @@ class WorkshopService {
       },
       orderBy: { event_day: 'asc' },
     });
+    return workshops.map((w) => ({ ...w, id: w.id.toString() }));
   }
 
+  /**
+   * Returns a single workshop by ID, or null if not found.
+   *
+   * @param {number|string} id
+   * @returns {Promise<object|null>}
+   */
   static async getWorkshopById(id) {
     const workshop = await prisma.workshop.findUnique({
       where: { id: BigInt(id) },
@@ -65,7 +69,8 @@ class WorkshopService {
       },
     });
 
-    return workshop;
+    if (!workshop) return null;
+    return { ...workshop, id: workshop.id.toString() };
   }
 
   static async processRegistration(userId, workshopId) {
@@ -138,18 +143,17 @@ class WorkshopService {
       };
     });
 
-    if (result._seatBroadcast) {
+    const { _seatBroadcast, ...publicResult } = result;
+
+    if (_seatBroadcast) {
       try {
-        await redisPublisher.publish(
-          'seat_updates',
-          JSON.stringify(result._seatBroadcast)
-        );
+        await redisPublisher.publish('seat_updates', JSON.stringify(_seatBroadcast));
       } catch (err) {
         console.error('[Redis Pub] Failed to broadcast seat_updates — registration unaffected:', err);
       }
     }
 
-    return result;
+    return publicResult;
   }
 }
 

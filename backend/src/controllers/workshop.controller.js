@@ -14,8 +14,8 @@ class WorkshopController {
   }
 
   static async getWorkshopById(req, res) {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id) || id <= 0) {
+    const id = req.params.id;
+    if (!/^[1-9]\d*$/.test(id)) {
       return res.status(400).json({ message: 'Invalid workshop ID' });
     }
 
