@@ -1,5 +1,5 @@
-import HomeScreen from '@/features/home';
+import WorkshopList from '@/features/workshop';
 
 export default function Index() {
-  return <HomeScreen />;
+  return <WorkshopList />;
 }
