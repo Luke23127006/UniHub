@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -7,13 +7,16 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { QRBoundingBox } from '@/components/ui/QRBoundingBox';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function QRCodeScanner() {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
   const [isScanning, setIsScanning] = useState(true);
   const [zoom, setZoom] = useState(0); // Standard state for zoom
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -76,7 +79,10 @@ export default function QRCodeScanner() {
           />
 
           {/* Overlay UI */}
-          <View style={styles.overlay}>
+          <View 
+            style={[styles.overlay, { paddingTop: insets.top + 60 }]} 
+            pointerEvents="none"
+          >
             <ThemedText type="subtitle" style={styles.hint}>
               Align QR code within the frame
             </ThemedText>
@@ -85,7 +91,7 @@ export default function QRCodeScanner() {
           <QRBoundingBox bounds={bounds} data={scannedData ?? undefined} />
 
           {/* Zoom Indicator */}
-          <View style={styles.zoomContainer}>
+          <View style={[styles.zoomContainer, { bottom: insets.bottom + 140 }]}>
             <View style={styles.zoomBadge}>
               <Text style={styles.zoomText}>{Math.round(zoom * 10 + 1) / 10}x</Text>
             </View>
@@ -94,7 +100,7 @@ export default function QRCodeScanner() {
           {/* Scanner Toggle / Reset */}
           {!isScanning && (
             <TouchableOpacity
-              style={styles.rescanButton}
+              style={[styles.rescanButton, { bottom: insets.bottom + 60 }]}
               onPress={() => {
                 setScannedData(null);
                 setBounds(null);
