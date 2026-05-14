@@ -5,7 +5,7 @@ const workshopRegistrationLimiter = rateLimit({
   max: 2, // Only allow 1 user to click at most 2 times per 10 seconds
 
   keyGenerator: (req) => {
-    return req.headers['x-user-id'] || req.ip; 
+    return req.user?.sub ?? req.ip;
   },
   
   message: {

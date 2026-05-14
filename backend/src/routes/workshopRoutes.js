@@ -6,8 +6,16 @@ const router = Router();
 
 // ── Public ────────────────────────────────────────────────────────────────────
 // GET /v1/workshops        – list open workshops (no auth required)
+router.get(
+  '/',
+  (req, res) => res.status(501).json({ message: 'listWorkshops – not yet implemented' })
+);
+
 // GET /v1/workshops/:id    – workshop detail + AI summary (no auth required)
-// These are intentionally left without middleware per the RBAC matrix.
+router.get(
+  '/:id',
+  (req, res) => res.status(501).json({ message: 'getWorkshop – not yet implemented' })
+);
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 // POST /v1/workshops
