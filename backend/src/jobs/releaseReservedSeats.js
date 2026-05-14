@@ -1,9 +1,11 @@
 const cron = require('node-cron');
 const prisma = require('../config/db');
+const redlock = require('../config/redlock');
 
 const RESERVED_TTL_HOURS = 24;
-// Cron expression: every 10 minutes
 const CRON_SCHEDULE = '*/10 * * * *';
+const JOB_LOCK_KEY = 'lock:jobs:releaseReservedSeats';
+const JOB_LOCK_TTL_MS = 9 * 60 * 1000; // slightly under the 10-min cron interval
 
 /**
  * Finds every Registration that has been in `reserved` status for longer than
@@ -13,6 +15,26 @@ const CRON_SCHEDULE = '*/10 * * * *';
  * roll back the releases that have already succeeded.
  */
 async function releaseReservedSeats() {
+  let jobLock;
+  try {
+    jobLock = await redlock.acquire([JOB_LOCK_KEY], JOB_LOCK_TTL_MS);
+  } catch {
+    console.log('[releaseReservedSeats] Another instance is running this job, skipping.');
+    return;
+  }
+
+  try {
+    await _releaseReservedSeats();
+  } finally {
+    try {
+      await jobLock.release();
+    } catch (err) {
+      console.error('[releaseReservedSeats] Failed to release job lock:', err.message);
+    }
+  }
+}
+
+async function _releaseReservedSeats() {
   const cutoff = new Date(Date.now() - RESERVED_TTL_HOURS * 60 * 60 * 1000);
 
   console.log(`[releaseReservedSeats] Running — cutoff: ${cutoff.toISOString()}`);
@@ -44,13 +66,15 @@ async function releaseReservedSeats() {
   for (const registration of staleRegistrations) {
     try {
       await prisma.$transaction(async (tx) => {
-        await tx.registration.update({
-          where: { id: registration.id },
+        const { count } = await tx.registration.updateMany({
+          where: { id: registration.id, status: 'reserved' },
           data: {
             status: 'cancelled',
             cancelled_at: new Date(),
           },
         });
+
+        if (count === 0) return;
 
         await tx.workshop.update({
           where: { id: registration.workshop_id },

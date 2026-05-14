@@ -12,7 +12,9 @@ const checkIdempotency = async (req, res, next) => {
     return next();
   }
 
-  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+  const userId = req.user?.id ?? 'anon';
+  const scopedKey = `${userId}:${req.method}:${req.originalUrl}:${rawKey}`;
+  const keyHash = crypto.createHash('sha256').update(scopedKey).digest('hex');
   const redisKey = `${REDIS_PREFIX}${keyHash}`;
 
   try {
@@ -68,7 +70,7 @@ const checkIdempotency = async (req, res, next) => {
             data: {
               key_hash: keyHash,
               user_id: req.user.id,
-              resource_type: req.path,
+              resource_type: `${req.baseUrl}${req.path}`,
               response_status: status,
               response_body: bodyStr,
               expires_at: expiresAt,
