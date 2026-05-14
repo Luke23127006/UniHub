@@ -11,7 +11,7 @@ export const useQRCodeScanner = () => {
     try {
       const result = await validateQRCode(data);
       setScanResult(result);
-    } catch (_error) {
+    } catch {
       setScanResult({ success: false, message: 'Failed to scan QR Code' });
     } finally {
       setIsScanning(false);
