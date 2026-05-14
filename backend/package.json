@@ -12,11 +12,10 @@
     "csv:test": "node src/jobs/csvSyncWorker.test.js"
   },
   "jest": {
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/__tests__/**/*.test.js"
-    ],
-    "clearMocks": true
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "src/jobs/"
+    ]
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -39,11 +38,5 @@
   },
   "prisma": {
     "seed": "node prisma/seed.js"
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "src/jobs/"
-    ]
   }
 }
