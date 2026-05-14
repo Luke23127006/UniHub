@@ -10,8 +10,8 @@ interface HistoryCardProps {
 }
 
 export const HistoryCard = ({ item }: HistoryCardProps) => {
-  const isSynced = !item.isLocalOnly;
-  const date = new Date(item.checkInTime);
+  const isSynced = item.status === 'synced';
+  const date = new Date(item.timestamp);
   const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -23,12 +23,12 @@ export const HistoryCard = ({ item }: HistoryCardProps) => {
         <View style={styles.topRow}>
           <View style={styles.studentInfo}>
             <ThemedText style={styles.studentName}>{item.studentName}</ThemedText>
-            <ThemedText style={styles.studentId}>{item.studentCode}</ThemedText>
+            <ThemedText style={styles.studentId}>{item.studentId}</ThemedText>
           </View>
           <View style={[styles.statusTag, isSynced ? styles.statusSynced : styles.statusPending]}>
             <View style={[styles.statusDot, { backgroundColor: isSynced ? '#10B981' : '#F59E0B' }]} />
             <ThemedText style={[styles.statusText, { color: isSynced ? '#10B981' : '#F59E0B' }]}>
-              {isSynced ? 'SYNCED' : 'PENDING'}
+              {item.status.toUpperCase()}
             </ThemedText>
           </View>
         </View>

@@ -1,11 +1,8 @@
 export interface CheckInHistory {
   id: string;
-  ticketId?: string;
   studentName: string;
-  studentCode: string;
+  studentId: string;
   workshopTitle: string;
-  checkInTime: string;
-  isOffline: boolean;
-  staffName?: string;
-  isLocalOnly?: boolean;
+  timestamp: string;
+  status: 'synced' | 'pending';
 }
