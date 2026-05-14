@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { validateQRCode } from './api';
-import { ScanResult } from './types';
+import { useState } from "react";
+import { validateQRCode } from "./api";
+import { ScanResult } from "./types";
 
 export const useQRCodeScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
@@ -12,7 +12,7 @@ export const useQRCodeScanner = () => {
       const result = await validateQRCode(data);
       setScanResult(result);
     } catch {
-      setScanResult({ success: false, message: 'Failed to scan QR Code' });
+      setScanResult({ success: false, message: "Failed to scan QR Code" });
     } finally {
       setIsScanning(false);
     }
