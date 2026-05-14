@@ -25,8 +25,8 @@ function makeRes() {
   return res;
 }
 
-function makeReq({ ip = '1.2.3.4', headers = {} } = {}) {
-  return { ip, headers };
+function makeReq({ ip = '1.2.3.4', headers = {}, user = undefined } = {}) {
+  return { ip, headers, user };
 }
 
 describe('rateLimiter middleware', () => {
@@ -51,16 +51,7 @@ describe('rateLimiter middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('uses x-forwarded-for as the rate-limit key', async () => {
-      mockConsume.mockResolvedValueOnce({});
-      const req = makeReq({ headers: { 'x-forwarded-for': '203.0.113.1' } });
-
-      await globalLimiter(req, res, next);
-
-      expect(mockConsume).toHaveBeenCalledWith('203.0.113.1');
-    });
-
-    it('falls back to req.ip when x-forwarded-for is absent', async () => {
+    it('uses req.ip as the rate-limit key', async () => {
       mockConsume.mockResolvedValueOnce({});
       const req = makeReq({ ip: '192.168.1.10' });
 
@@ -89,6 +80,17 @@ describe('rateLimiter middleware', () => {
       // Math.ceil(7300 / 1000) === 8
       expect(res.set).toHaveBeenCalledWith('Retry-After', 8);
     });
+
+    it('forwards operational errors (no msBeforeNext) to next()', async () => {
+      const err = new Error('Redis connection failed');
+      mockConsume.mockRejectedValueOnce(err);
+      const req = makeReq();
+
+      await globalLimiter(req, res, next);
+
+      expect(res.status).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(err);
+    });
   });
 
   // ─── registrationLimiter ─────────────────────────────────────────────────
@@ -96,7 +98,7 @@ describe('rateLimiter middleware', () => {
   describe('registrationLimiter', () => {
     it('calls next() when under the limit', async () => {
       mockConsume.mockResolvedValueOnce({});
-      const req = makeReq({ headers: { 'x-user-id': 'user-1' } });
+      const req = makeReq({ user: { id: 1 } });
 
       await registrationLimiter(req, res, next);
 
@@ -104,25 +106,16 @@ describe('rateLimiter middleware', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('uses x-user-id as the rate-limit key when present', async () => {
+    it('uses req.user.id (stringified) as the rate-limit key when authenticated', async () => {
       mockConsume.mockResolvedValueOnce({});
-      const req = makeReq({ headers: { 'x-user-id': 'user-42' } });
+      const req = makeReq({ user: { id: 42 } });
 
       await registrationLimiter(req, res, next);
 
-      expect(mockConsume).toHaveBeenCalledWith('user-42');
+      expect(mockConsume).toHaveBeenCalledWith('42');
     });
 
-    it('falls back to x-forwarded-for when x-user-id is absent', async () => {
-      mockConsume.mockResolvedValueOnce({});
-      const req = makeReq({ headers: { 'x-forwarded-for': '203.0.113.2' } });
-
-      await registrationLimiter(req, res, next);
-
-      expect(mockConsume).toHaveBeenCalledWith('203.0.113.2');
-    });
-
-    it('falls back to req.ip when both x-user-id and x-forwarded-for are absent', async () => {
+    it('falls back to req.ip when user is not authenticated', async () => {
       mockConsume.mockResolvedValueOnce({});
       const req = makeReq({ ip: '10.0.0.5' });
 
@@ -133,7 +126,7 @@ describe('rateLimiter middleware', () => {
 
     it('returns 429 with correct body when the 2 req/10 s limit is exceeded', async () => {
       mockConsume.mockRejectedValueOnce({ msBeforeNext: 3500 });
-      const req = makeReq({ headers: { 'x-user-id': 'user-42' } });
+      const req = makeReq({ user: { id: 42 } });
 
       await registrationLimiter(req, res, next);
 
@@ -144,12 +137,23 @@ describe('rateLimiter middleware', () => {
 
     it('sets Retry-After header to ceil(msBeforeNext / 1000) seconds', async () => {
       mockConsume.mockRejectedValueOnce({ msBeforeNext: 3500 });
-      const req = makeReq({ headers: { 'x-user-id': 'user-42' } });
+      const req = makeReq({ user: { id: 42 } });
 
       await registrationLimiter(req, res, next);
 
       // Math.ceil(3500 / 1000) === 4
       expect(res.set).toHaveBeenCalledWith('Retry-After', 4);
+    });
+
+    it('forwards operational errors (no msBeforeNext) to next()', async () => {
+      const err = new Error('Redis connection failed');
+      mockConsume.mockRejectedValueOnce(err);
+      const req = makeReq({ user: { id: 1 } });
+
+      await registrationLimiter(req, res, next);
+
+      expect(res.status).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(err);
     });
   });
 });

@@ -27,21 +27,24 @@ function makeMiddleware(limiter, keyFn) {
       await limiter.consume(key);
       next();
     } catch (rejRes) {
-      const retryAfter = Math.ceil(rejRes.msBeforeNext / 1000);
-      res.set('Retry-After', retryAfter);
-      res.status(429).json(TOO_MANY_REQUESTS);
+      if (rejRes && typeof rejRes.msBeforeNext === 'number') {
+        const retryAfter = Math.ceil(rejRes.msBeforeNext / 1000);
+        res.set('Retry-After', retryAfter);
+        return res.status(429).json(TOO_MANY_REQUESTS);
+      }
+      next(rejRes);
     }
   };
 }
 
 const globalLimiter = makeMiddleware(
   globalRateLimiter,
-  (req) => req.headers['x-forwarded-for'] || req.ip,
+  (req) => req.ip,
 );
 
 const registrationLimiter = makeMiddleware(
   registrationRateLimiter,
-  (req) => req.headers['x-user-id'] || req.headers['x-forwarded-for'] || req.ip,
+  (req) => (req.user && req.user.id != null ? String(req.user.id) : req.ip),
 );
 
 module.exports = { globalLimiter, registrationLimiter };
