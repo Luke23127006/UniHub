@@ -46,6 +46,21 @@ const verifyToken = (req, res, next) => {
   try {
     /** @type {JwtPayload} */
     const decoded = jwt.verify(token, secret);
+
+    const VALID_ROLES = ['Student', 'Staff', 'Admin'];
+    if (
+      typeof decoded !== 'object' ||
+      decoded === null ||
+      typeof decoded.sub !== 'string' ||
+      typeof decoded.email !== 'string' ||
+      !VALID_ROLES.includes(decoded.role)
+    ) {
+      return res.status(401).json({
+        status: 'error',
+        error: { code: 'INVALID_TOKEN', message: 'Token payload is malformed.' },
+      });
+    }
+
     req.user = decoded;
     return next();
   } catch (err) {

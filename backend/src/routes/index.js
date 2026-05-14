@@ -7,8 +7,8 @@ const checkinRoutes = require('./checkinRoutes');
 const router = Router();
 
 router.use(healthRoutes);
-router.use('/v1/workshops', workshopRoutes);
-router.use('/v1/tickets', ticketRoutes);
-router.use('/v1/checkin', checkinRoutes);
+router.use('/workshops', workshopRoutes);
+router.use('/tickets', ticketRoutes);
+router.use('/checkin', checkinRoutes);
 
 module.exports = router;

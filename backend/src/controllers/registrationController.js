@@ -7,7 +7,8 @@ class RegistrationController {
    */
   static async registerWorkshop(req, res) {
     try {
-      const workshopId = parseInt(req.params.id, 10);
+      const rawId = req.params.id ?? req.body?.workshopId;
+      const workshopId = parseInt(rawId, 10);
       const userId = req.user.sub; // Set by verifyToken (JWT sub claim)
 
       if (isNaN(workshopId) || workshopId <= 0) {
