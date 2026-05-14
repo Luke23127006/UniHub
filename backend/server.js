@@ -19,36 +19,48 @@ app.use(globalLimiter);
 app.use('/api/v1', routes);
 
 let server;
+let rabbitRetryTimeout;
+let isShuttingDown = false;
 
-async function bootstrap() {
+// Retry RabbitMQ + worker init independently from the HTTP server.
+// A transient queue outage should not take down health checks or other API routes.
+async function initBackgroundServices() {
+  if (isShuttingDown) return;
+
   try {
-    // Initialize RabbitMQ connection
     await connectRabbitMQ();
-    
-    // Start the worker to consume messages
     await startRegistrationWorker();
-
-    // Start cron jobs
     startReleaseReservedSeatsJob();
-
-    server = app.listen(PORT, () => {
-      console.log(`Server running on port http://localhost:${PORT}`);
-    });
-   
-    // Config keep alive timeout and headers timeout
-    // This is needed for long polling connections (SSE)
-    server.keepAliveTimeout = 61000;
-    server.headersTimeout = 65000;
+    console.log('RabbitMQ connected and background workers started.');
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console.error('Background services failed to start, retrying in 5s:', error.message);
+    rabbitRetryTimeout = setTimeout(initBackgroundServices, 5000);
   }
+}
+
+function bootstrap() {
+  server = app.listen(PORT, () => {
+    console.log(`Server running on port http://localhost:${PORT}`);
+  });
+
+  // Needed for long-polling / SSE connections
+  server.keepAliveTimeout = 61000;
+  server.headersTimeout = 65000;
+
+  // Start queue-dependent services in the background — HTTP is already accepting requests.
+  initBackgroundServices();
 }
 
 bootstrap();
 
 async function shutdown() {
+  isShuttingDown = true;
   console.log('Shutting down...');
+
+  if (rabbitRetryTimeout) {
+    clearTimeout(rabbitRetryTimeout);
+  }
+
   if (server) {
     server.close(async () => {
       await closeRabbitMQ();

@@ -158,7 +158,7 @@ export default function RegistrationPage() {
                   <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
                   <button
                     type="submit"
-                    disabled={isSubmitting || workshop.available_seats <= 0}
+                    disabled={isSubmitting || workshop.available_seats <= 0 || workshop.status !== 'published'}
                     className="w-full relative group active:scale-[0.98] transition-all duration-200"
                   >
                     <div className={`relative flex items-center justify-center py-5 px-10 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black uppercase tracking-[0.3em] text-[11px] transition-all duration-300 ${isSubmitting ? 'opacity-80' : 'hover:shadow-2xl shadow-gray-200 dark:shadow-none'}`}>
@@ -174,6 +174,7 @@ export default function RegistrationPage() {
                             Finalizing...
                           </>
                         ) : (
+                          workshop.status !== 'published' ? 'Registration Unavailable' :
                           workshop.available_seats > 0 ? 'Complete Registration' : 'Workshop Full'
                         )}
                       </span>
