@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /usr/src/app
 
@@ -10,7 +10,7 @@ RUN npm install --ignore-scripts
 COPY . .
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate --schema src/prisma/schema.prisma
 
 EXPOSE 3000
 
