@@ -63,11 +63,13 @@ export const ticketApi = {
   
   async register(workshopId, idempotencyKey) {
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/v1/tickets/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ workshop_id: workshopId }),
       });

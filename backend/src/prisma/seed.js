@@ -60,13 +60,6 @@ async function main() {
   const batchSize = 5_000;
 
   for (let i = 0; i < totalUsers; i += batchSize) {
-    // Skip if the first user of this batch already exists (idempotent re-runs)
-    const existingUser = await prisma.user.findUnique({ where: { id: BigInt(i + 1) } });
-    if (existingUser) {
-      console.log(`Batch ${i + 1}–${i + batchSize} already exists, skipping...`);
-      continue;
-    }
-
     const userValues = [];
     const studentValues = [];
 

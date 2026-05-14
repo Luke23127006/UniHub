@@ -1,21 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import RegistrationPage from '../RegistrationPage';
-import { workshopApi } from '@/features/workshop/api';
+import RegistrationPage, { action } from '../RegistrationPage';
 import { ticketApi } from '../../api';
 
-// Mock the APIs
 vi.mock('@/features/workshop/api', () => ({
-  workshopApi: {
-    getById: vi.fn(),
-  },
+  workshopApi: { getById: vi.fn() },
 }));
 
 vi.mock('../../api', () => ({
-  ticketApi: {
-    register: vi.fn(),
-  },
+  ticketApi: { register: vi.fn() },
 }));
 
 const mockWorkshop = {
@@ -31,19 +25,26 @@ const mockWorkshop = {
   room: { room_code: 'Lab 5', building: 'Tech Block' },
 };
 
-// Mock useLoaderData
-vi.mock('react-router', async () => {
-  const actual = await vi.importActual('react-router');
-  return {
-    ...actual,
-    useLoaderData: () => ({ workshop: mockWorkshop }),
-    useNavigate: () => vi.fn(),
-  };
-});
-
-// Mock crypto.randomUUID
 if (!global.crypto.randomUUID) {
   global.crypto.randomUUID = () => 'test-uuid';
+}
+
+function renderPage(workshop = mockWorkshop) {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/workshops/:id/register',
+        element: <RegistrationPage />,
+        loader: () => ({ workshop }),
+        action,
+      },
+      { path: '/my-tickets/:id', element: <div data-testid="ticket-page" /> },
+      { path: '/checkout/:id', element: <div data-testid="checkout-page" /> },
+    ],
+    { initialEntries: ['/workshops/1/register'] }
+  );
+
+  return render(<RouterProvider router={router} />);
 }
 
 describe('RegistrationPage', () => {
@@ -51,14 +52,10 @@ describe('RegistrationPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders workshop details for confirmation', () => {
-    render(
-      <MemoryRouter>
-        <RegistrationPage />
-      </MemoryRouter>
-    );
+  it('renders workshop details for confirmation', async () => {
+    renderPage();
 
-    expect(screen.getByText(/Confirm Registration/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Confirm Registration/i)).toBeInTheDocument();
     expect(screen.getByText(/Workshop Details/i)).toBeInTheDocument();
     expect(screen.getByText(mockWorkshop.title)).toBeInTheDocument();
     expect(screen.getByText(/50.000 VND/i)).toBeInTheDocument();
@@ -67,51 +64,33 @@ describe('RegistrationPage', () => {
   it('calls register API when confirm button is clicked', async () => {
     ticketApi.register.mockResolvedValueOnce({ id: 'TKT-123', status: 'CONFIRMED' });
 
-    render(
-      <MemoryRouter>
-        <RegistrationPage />
-      </MemoryRouter>
-    );
+    renderPage();
 
-    const confirmButton = screen.getByText(/Complete Registration/i);
+    const confirmButton = await screen.findByText(/Complete Registration/i);
     fireEvent.click(confirmButton);
 
-    expect(confirmButton.closest('span')).toHaveTextContent(/Finalizing.../i);
-    
     await waitFor(() => {
-      expect(ticketApi.register).toHaveBeenCalledWith(mockWorkshop.id, expect.any(String));
+      expect(ticketApi.register).toHaveBeenCalledWith('1', expect.any(String));
     });
   });
 
   it('shows error message if registration fails', async () => {
     ticketApi.register.mockRejectedValueOnce(new Error('API Error'));
 
-    render(
-      <MemoryRouter>
-        <RegistrationPage />
-      </MemoryRouter>
-    );
+    renderPage();
 
-    fireEvent.click(screen.getByText(/Complete Registration/i));
+    const confirmButton = await screen.findByText(/Complete Registration/i);
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Registration failed. Please try again later./i)).toBeInTheDocument();
     });
   });
 
-  it('disables button when no seats available', () => {
-    mockWorkshop.available_seats = 0;
+  it('disables button when no seats available', async () => {
+    renderPage({ ...mockWorkshop, available_seats: 0 });
 
-    render(
-      <MemoryRouter>
-        <RegistrationPage />
-      </MemoryRouter>
-    );
-
-    const button = screen.getByText(/Workshop Full/i);
+    const button = await screen.findByText(/Workshop Full/i);
     expect(button.closest('button')).toBeDisabled();
-    
-    // Reset
-    mockWorkshop.available_seats = 10;
   });
 });

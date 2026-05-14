@@ -1,11 +1,32 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { Form, Link, redirect, useNavigation } from 'react-router';
+import { Form, Link, redirect, useNavigation, useActionData } from 'react-router';
 
 const inputClass =
   'w-full rounded-lg border border-unihub-border bg-white px-4 py-3 text-sm text-unihub-text outline-none transition placeholder:text-gray-400 focus:border-unihub-primary focus:ring-4 focus:ring-unihub-primary/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-unihub-gold dark:focus:ring-unihub-gold/10';
 
-export async function action() {
-  return redirect('/');
+export async function action({ request }) {
+  const formData = await request.formData();
+  const email = formData.get('email');
+  const password = formData.get('password');
+
+  try {
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      return { error: body.message || 'Invalid credentials. Please try again.' };
+    }
+
+    const { access_token } = await response.json();
+    localStorage.setItem('auth_token', access_token);
+    return redirect('/');
+  } catch {
+    return { error: 'Unable to connect to the server. Please try again later.' };
+  }
 }
 
 function PinkHairCharacter({ mode, emailLength, showPassword, mousePos }) {
@@ -228,7 +249,9 @@ export default function LoginPage() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const cardRef = useRef(null);
   const navigation = useNavigation();
+  const actionData = useActionData();
   const isSubmitting = navigation.state === 'submitting';
+  const loginError = actionData?.error;
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -330,6 +353,12 @@ export default function LoginPage() {
                 Quên mật khẩu
               </Link>
             </div>
+
+            {loginError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+                {loginError}
+              </p>
+            )}
 
             <div className="pt-1">
               <button
