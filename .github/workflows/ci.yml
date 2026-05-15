@@ -31,8 +31,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --schema src/prisma/schema.prisma
 
-      # - name: Run Tests
-      #   run: npm test
+      - name: Run Tests
+        run: npm test
 
   frontend-ci:
     name: Frontend CI (Build)
