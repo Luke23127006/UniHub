@@ -43,9 +43,12 @@ function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-/** Constructs the exact Redis key the middleware will use for a given raw key. */
-function expectedRedisKey(rawKey) {
-  return `${REDIS_PREFIX}${sha256(rawKey)}`;
+/** Constructs the exact Redis key the middleware will use for a given raw key.
+ *  Must replicate the source's scoping formula: userId:method:originalUrl:rawKey */
+function expectedRedisKey(rawKey, reqObj) {
+  const userId = reqObj?.user?.id ?? 'anon';
+  const scopedKey = `${userId}:${reqObj?.method}:${reqObj?.originalUrl}:${rawKey}`;
+  return `${REDIS_PREFIX}${sha256(scopedKey)}`;
 }
 
 /** Returns a chainable Express res mock: res.status(n) → res, res.json(b) recorded. */
@@ -72,6 +75,9 @@ describe('checkIdempotency middleware', () => {
     req = {
       headers: {},
       user: { id: BigInt(1) },
+      method: 'POST',
+      originalUrl: '/workshops/1/register',
+      baseUrl: '',
       path: '/workshops/1/register',
     };
 
@@ -120,7 +126,7 @@ describe('checkIdempotency middleware', () => {
     it('looks up Redis using the SHA-256 hash of the raw key prefixed with "idempotency:"', async () => {
       await checkIdempotency(req, res, next);
 
-      expect(redisClient.get).toHaveBeenCalledWith(expectedRedisKey(RAW_KEY));
+      expect(redisClient.get).toHaveBeenCalledWith(expectedRedisKey(RAW_KEY, req));
     });
 
     it('returns the cached HTTP status and body', async () => {
@@ -196,7 +202,7 @@ describe('checkIdempotency middleware', () => {
       await checkIdempotency(req, res, next);
 
       expect(redisClient.set).toHaveBeenCalledWith(
-        expectedRedisKey(RAW_KEY),
+        expectedRedisKey(RAW_KEY, req),
         JSON.stringify({ status: DB_STATUS, body: DB_BODY }),
         'EX',
         REDIS_TTL_SECONDS,
@@ -260,7 +266,7 @@ describe('checkIdempotency middleware', () => {
         await runAndTriggerInterceptor();
 
         expect(redisClient.set).toHaveBeenCalledWith(
-          expectedRedisKey(RAW_KEY),
+          expectedRedisKey(RAW_KEY, req),
           JSON.stringify({ status: RESPONSE_STATUS, body: RESPONSE_BODY }),
           'EX',
           REDIS_TTL_SECONDS,
@@ -272,9 +278,9 @@ describe('checkIdempotency middleware', () => {
 
         expect(prisma.idempotencyKey.create).toHaveBeenCalledWith({
           data: {
-            key_hash: sha256(RAW_KEY),
+            key_hash: sha256(`${req.user.id}:${req.method}:${req.originalUrl}:${RAW_KEY}`),
             user_id: req.user.id,
-            resource_type: req.path,
+            resource_type: req.baseUrl + req.path,
             response_status: RESPONSE_STATUS,
             response_body: JSON.stringify(RESPONSE_BODY),
             expires_at: expect.any(Date),

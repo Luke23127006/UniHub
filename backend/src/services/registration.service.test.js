@@ -96,15 +96,17 @@ describe('RegistrationService.registerForWorkshop', () => {
 
   describe('when redlock.acquire() throws (lock contention or Redis error)', () => {
     beforeEach(() => {
-      redlock.acquire.mockRejectedValue(new Error('ExecutionError: lock already held'));
+      const lockContentionError = new Error('lock already held');
+      lockContentionError.name = 'ExecutionError';
+      redlock.acquire.mockRejectedValue(lockContentionError);
     });
 
-    it('throws a 409 error with message "Workshop is sold out"', async () => {
+    it('throws a 409 error with message "Workshop is busy, please retry shortly"', async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
         statusCode: 409,
-        message: 'Workshop is sold out',
+        message: 'Workshop is busy, please retry shortly',
       });
     });
 

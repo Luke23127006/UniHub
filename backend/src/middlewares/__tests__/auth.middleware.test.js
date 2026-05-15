@@ -309,6 +309,10 @@ describe('requireRoles', () => {
 // ===========================================================================
 
 describe('verifyOwner', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   // ── Happy path ─────────────────────────────────────────────────────────────
 
   it('calls next() when req.user.sub matches the registration owner user_id', async () => {
