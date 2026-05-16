@@ -80,7 +80,7 @@ export default function AnalyticsDashboard() {
             onChange={(range) => range && setDateRange(range)}
             allowClear={false}
             format="DD/MM/YYYY"
-            disabledDate={(d) => d.isAfter(dayjs())}
+            disabledDate={(d) => d.isAfter(dayjs(), 'day')}
             presets={[
               { label: 'Last 7 days',  value: [dayjs().subtract(7, 'day'),  dayjs()] },
               { label: 'Last 30 days', value: [dayjs().subtract(30, 'day'), dayjs()] },
