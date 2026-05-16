@@ -161,7 +161,7 @@ class RegistrationService {
   static async confirmRegistration(registrationId) {
     const regIdBig = BigInt(registrationId);
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const registration = await tx.registration.findUnique({
         where: { id: regIdBig },
         include: { workshop: true }
@@ -186,6 +186,10 @@ class RegistrationService {
         data: {
           status: 'confirmed',
           confirmed_at: new Date(),
+        },
+        include: {
+          student: true,
+          workshop: true
         }
       });
 
@@ -198,7 +202,7 @@ class RegistrationService {
         },
         create: {
           registration_id: regIdBig,
-          amount: registration.workshop.price || 0,
+          amount: updated.workshop.price || 0,
           currency: 'VND',
           status: 'completed',
           completed_at: new Date(),
@@ -207,6 +211,30 @@ class RegistrationService {
 
       return updated;
     });
+
+    // Step 15: Publish event for background workers
+    try {
+      const { getChannel } = require('../config/rabbitmq');
+      const channel = getChannel();
+      if (channel) {
+        const message = {
+          event: 'ticket.created',
+          ticketId: result.id.toString(),
+          studentId: result.student_id.toString(),
+          workshopId: result.workshop_id.toString(),
+          timestamp: new Date().toISOString()
+        };
+        channel.sendToQueue('workshop_registration_queue', Buffer.from(JSON.stringify(message)), {
+          persistent: true
+        });
+        console.log(`[RegistrationService] Published ticket.created event for ID: ${result.id}`);
+      }
+    } catch (err) {
+      console.warn('[RegistrationService] Failed to publish event to RabbitMQ:', err.message);
+      // We don't throw here to avoid failing the payment confirmation if only the queue is down
+    }
+
+    return result;
   }
 }
 

@@ -83,6 +83,20 @@ services:
       - /usr/src/app/node_modules
       - /usr/src/app/src/generated
 
+  payment-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: unihub_payment_gateway
+    restart: always
+    ports:
+      - "4000:4000"
+    command: node scripts/mock-gateway.js
+    networks:
+      - unihub_network
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
 
   k6:
     image: grafana/k6:latest

@@ -2,17 +2,15 @@ const cron = require('node-cron');
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
 
-const RESERVED_TTL_HOURS = 24;
-const CRON_SCHEDULE = '*/10 * * * *';
+const RESERVED_TTL_MINUTES = 15;
+const CRON_SCHEDULE = '*/5 * * * *'; // Run every 5 minutes for better responsiveness
 const JOB_LOCK_KEY = 'lock:jobs:releaseReservedSeats';
-const JOB_LOCK_TTL_MS = 9 * 60 * 1000; // slightly under the 10-min cron interval
+const JOB_LOCK_TTL_MS = 4 * 60 * 1000;
 
 /**
- * Finds every Registration that has been in `reserved` status for longer than
- * RESERVED_TTL_HOURS and releases each held seat back to its Workshop.
- *
- * Each record is processed in its own transaction so a single DB error does not
- * roll back the releases that have already succeeded.
+ * Finds every Registration that hasn't been confirmed within RESERVED_TTL_MINUTES
+ * and releases each held seat back to its Workshop.
+ * Covers both 'pending_payment' and 'reserved' statuses.
  */
 async function releaseReservedSeats() {
   let jobLock;
@@ -35,7 +33,7 @@ async function releaseReservedSeats() {
 }
 
 async function _releaseReservedSeats() {
-  const cutoff = new Date(Date.now() - RESERVED_TTL_HOURS * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - RESERVED_TTL_MINUTES * 60 * 1000);
 
   console.log(`[releaseReservedSeats] Running — cutoff: ${cutoff.toISOString()}`);
 
@@ -43,7 +41,7 @@ async function _releaseReservedSeats() {
   try {
     staleRegistrations = await prisma.registration.findMany({
       where: {
-        status: 'reserved',
+        status: { in: ['pending_payment', 'reserved'] },
         registered_at: { lt: cutoff },
       },
       select: { id: true, workshop_id: true },
@@ -67,10 +65,14 @@ async function _releaseReservedSeats() {
     try {
       await prisma.$transaction(async (tx) => {
         const { count } = await tx.registration.updateMany({
-          where: { id: registration.id, status: 'reserved' },
+          where: { 
+            id: registration.id, 
+            status: { in: ['pending_payment', 'reserved'] } 
+          },
           data: {
             status: 'cancelled',
             cancelled_at: new Date(),
+            cancellation_reason: 'System: Payment timeout (15 minutes)',
           },
         });
 
@@ -97,7 +99,7 @@ async function _releaseReservedSeats() {
 
 function startReleaseReservedSeatsJob() {
   cron.schedule(CRON_SCHEDULE, releaseReservedSeats);
-  console.log(`[releaseReservedSeats] Scheduled — runs every 10 minutes.`);
+  console.log(`[releaseReservedSeats] Scheduled — runs every 5 minutes.`);
 }
 
 module.exports = { startReleaseReservedSeatsJob };

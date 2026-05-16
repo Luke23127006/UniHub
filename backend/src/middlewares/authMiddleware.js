@@ -22,6 +22,7 @@ const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn(`[verifyToken] Missing or malformed token for ${req.method} ${req.url}`);
     return res.status(401).json({
       status: 'error',
       error: {

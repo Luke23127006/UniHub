@@ -8,6 +8,9 @@ const router = express.Router();
 // [PHASE 5] Synchronous registration with immediate seat reservation
 router.post('/', workshopRegistrationLimiter, authMiddleware, RegistrationController.registerSynchronous);
 
+// [PHASE 6] Get my registrations
+router.get('/my', authMiddleware, RegistrationController.getMyRegistrations);
+
 // [PHASE 5] Webhook for payment gateway
 router.post('/webhook', RegistrationController.handlePaymentWebhook);
 

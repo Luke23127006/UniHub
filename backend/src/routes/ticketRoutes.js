@@ -2,8 +2,7 @@ const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
 const verifyOwner = require('../middlewares/ownerMiddleware');
-const RegistrationController = require('../controllers/registration.controller');
-const TicketController = require('../controllers/ticket.controller');
+const RegistrationController = require('../controllers/registrationController');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
 const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
 
@@ -17,17 +16,7 @@ router.post(
   requireRoles(['Student']),
   workshopRegistrationLimiter,
   checkIdempotency,
-  RegistrationController.registerWorkshop
-);
-
-// GET /v1/tickets/:id/qr
-// Guards: authenticated → Student role → must own this specific ticket (IDOR prevention)
-router.get(
-  '/:id/qr',
-  verifyToken,
-  requireRoles(['Student']),
-  verifyOwner,
-  TicketController.getTicketQr
+  RegistrationController.registerSynchronous
 );
 
 // GET /v1/tickets/my-tickets
@@ -36,7 +25,7 @@ router.get(
   '/my-tickets',
   verifyToken,
   requireRoles(['Student']),
-  (req, res) => res.status(501).json({ message: 'myTickets – not yet implemented' })
+  RegistrationController.getMyRegistrations
 );
 
 module.exports = router;

@@ -11,13 +11,14 @@ const STATUS_ACCENT = {
 
 function SeatsIndicator({ capacity, available }) {
   if (capacity === 0) return null;
-  const pct = Math.round((available / capacity) * 100);
+  const filled = capacity - available;
+  const pct = Math.round((filled / capacity) * 100);
   const barColor =
     available === 0
       ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]'
-      : pct <= 20
+      : pct >= 90
       ? 'bg-orange-500'
-      : pct <= 50
+      : pct >= 70
       ? 'bg-amber-500'
       : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]';
 
