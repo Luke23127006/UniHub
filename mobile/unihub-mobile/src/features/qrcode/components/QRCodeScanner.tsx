@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -22,7 +22,7 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const { id: workshopId } = useLocalSearchParams();
-  const { performCheckin, syncTicketsFromServer, syncCheckinsToServer, isSyncing } = useCheckin();
+  const { performCheckin, syncTicketsFromServer, syncCheckinsToServer } = useCheckin();
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
   const [isScanning, setIsScanning] = useState(true);
@@ -40,7 +40,7 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
       }
     };
     setup();
-  }, [workshopId]);
+  }, [workshopId, syncCheckinsToServer, syncTicketsFromServer]);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -103,10 +103,11 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
     if (!permission?.granted) {
       requestPermission();
     }
+    const currentTimeout = timeoutRef.current;
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (currentTimeout) clearTimeout(currentTimeout);
     };
-  }, []);
+  }, [permission?.granted, requestPermission]);
 
   if (!permission) {
     return <ThemedView style={styles.container} />;

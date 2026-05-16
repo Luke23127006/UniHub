@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { Workshop, Speaker } from '../types';
+import { Workshop } from '../types';
 import { apiClient } from '@/shared/api/api-client';
 
 interface WorkshopContextType {
