@@ -16,7 +16,6 @@ import { StatusBar } from 'expo-status-bar';
 import { HistoryCard } from './HistoryCard';
 import { HistoryService } from '../services/HistoryService';
 import { CheckInHistory } from '../types';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PAGE_SIZE = 15;
@@ -36,7 +35,7 @@ export default function HistoryScreen() {
   // Use a ref to track the latest filter/search to avoid unnecessary re-fetches
   const fetchId = useRef(0);
 
-  const loadData = async (pageNum: number, isInitial: boolean = false) => {
+  const loadData = useCallback(async (pageNum: number, isInitial: boolean = false) => {
     const currentFetchId = ++fetchId.current;
     
     if (isInitial) setLoading(true);
@@ -63,13 +62,13 @@ export default function HistoryScreen() {
         setLoadingMore(false);
       }
     }
-  };
+  }, [filter, search]);
 
   // Initial load or filter/search change
   useEffect(() => {
     setPage(1);
     loadData(1, true);
-  }, [filter, search]);
+  }, [filter, search, loadData]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore && !loading) {
