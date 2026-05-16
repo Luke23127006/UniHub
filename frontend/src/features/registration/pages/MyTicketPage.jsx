@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router';
+import { Link, useLoaderData } from 'react-router';
 import {
   Select,
   SelectContent,
@@ -7,7 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MOCK_TICKETS } from '../api';
+import { ticketApi } from '../api';
+
+// ─── Loader ──────────────────────────────────────────────────────────────────
+
+export async function loader() {
+  const tickets = await ticketApi.list();
+  return { tickets };
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -73,13 +80,14 @@ function StatCard({ label, value }) {
 function TicketStatusBadge({ status }) {
   const styles = {
     CONFIRMED: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
-    PENDING: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    PENDING_PAYMENT: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    RESERVED: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
     CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20',
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.PENDING}`}>
-      {status}
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.PENDING_PAYMENT}`}>
+      {status.replace('_', ' ')}
     </span>
   );
 }
@@ -87,13 +95,13 @@ function TicketStatusBadge({ status }) {
 function TicketCard({ ticket }) {
   const isConfirmed = ticket.status === 'CONFIRMED';
   
-  // Elegant top border color instead of gradient
-  const topBorderColor = isConfirmed ? 'bg-emerald-500' : ticket.status === 'PENDING' ? 'bg-amber-500' : 'bg-rose-500';
+  const topBorderColor = isConfirmed ? 'bg-emerald-500' : 
+                        (ticket.status === 'PENDING_PAYMENT' || ticket.status === 'RESERVED') ? 'bg-amber-500' : 
+                        'bg-rose-500';
 
   return (
     <div className="group relative flex flex-col rounded-2xl border border-unihub-border dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
       
-      {/* Solid elegant top bar */}
       <div className={`h-1 w-full ${topBorderColor}`}></div>
       
       <div className="p-6 flex-1 flex flex-col">
@@ -119,23 +127,22 @@ function TicketCard({ ticket }) {
             <div className="p-1.5 rounded-md bg-gray-50 dark:bg-gray-700/50">
               <LocationIcon />
             </div>
-            {ticket.workshop.room?.room_code}
+            {ticket.workshop.room?.room_code || 'TBA'}
           </div>
         </div>
       </div>
       
-      {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Payment</span>
-          <span className={`text-sm font-bold ${ticket.payment_status === 'PAID' ? 'text-emerald-600 dark:text-emerald-400' : ticket.payment_status === 'FREE' ? 'text-blue-600 dark:text-blue-400' : ticket.payment_status === 'REFUNDED' ? 'text-gray-500' : 'text-amber-600 dark:text-amber-400'}`}>
+          <span className={`text-sm font-bold ${ticket.payment_status === 'PAID' ? 'text-emerald-600 dark:text-emerald-400' : ticket.payment_status === 'FREE' ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
             {ticket.payment_status}
           </span>
         </div>
         
         <Link 
           to={isConfirmed ? `/my-tickets/${ticket.id}` : `/checkout/${ticket.id}`}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all focus:ring-2 focus:outline-none ${isConfirmed ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 focus:ring-gray-900/50' : ticket.status === 'PENDING' ? 'bg-unihub-primary text-white hover:bg-red-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all focus:ring-2 focus:outline-none ${isConfirmed ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 focus:ring-gray-900/50' : (ticket.status === 'PENDING_PAYMENT' || ticket.status === 'RESERVED') ? 'bg-unihub-primary text-white hover:bg-red-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
           onClick={(e) => ticket.status === 'CANCELLED' && e.preventDefault()}
         >
           {isConfirmed ? (
@@ -143,7 +150,7 @@ function TicketCard({ ticket }) {
               <QrCodeIcon />
               View Ticket
             </>
-          ) : ticket.status === 'PENDING' ? (
+          ) : (ticket.status === 'PENDING_PAYMENT' || ticket.status === 'RESERVED') ? (
             'Complete Payment'
           ) : (
             'Cancelled'
@@ -157,32 +164,32 @@ function TicketCard({ ticket }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function MyTicketPage() {
+  const { tickets } = useLoaderData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   const stats = useMemo(() => {
     return {
-      total: MOCK_TICKETS.length,
-      upcoming: MOCK_TICKETS.filter(t => t.status === 'CONFIRMED' && new Date(t.workshop.start_time) >= new Date()).length,
-      pending: MOCK_TICKETS.filter(t => t.status === 'PENDING').length,
-      cancelled: MOCK_TICKETS.filter(t => t.status === 'CANCELLED').length,
+      total: tickets.length,
+      upcoming: tickets.filter(t => t.status === 'CONFIRMED' && new Date(t.workshop.start_time) >= new Date()).length,
+      pending: tickets.filter(t => t.status === 'PENDING_PAYMENT' || t.status === 'RESERVED').length,
+      cancelled: tickets.filter(t => t.status === 'CANCELLED').length,
     };
-  }, []);
+  }, [tickets]);
 
   const filteredTickets = useMemo(() => {
-    return MOCK_TICKETS.filter(t => {
-      const matchesSearch = !search || t.workshop.title.toLowerCase().includes(search.toLowerCase()) || t.id.toLowerCase().includes(search.toLowerCase());
+    return tickets.filter(t => {
+      const matchesSearch = !search || 
+                           t.workshop.title.toLowerCase().includes(search.toLowerCase()) || 
+                           t.id.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'ALL' || t.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [search, statusFilter]);
+  }, [tickets, search, statusFilter]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] pb-12 bg-gray-50/30 dark:bg-gray-900/10">
-
       <div className="relative z-10 space-y-8 max-w-7xl mx-auto pt-6 px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             My Registrations
@@ -192,33 +199,14 @@ export default function MyTicketPage() {
           </p>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <StatCard 
-            label="Total Tickets" 
-            value={stats.total} 
-            accent={{ text: 'text-gray-900 dark:text-white', bg: 'from-gray-500 to-gray-400' }} 
-          />
-          <StatCard 
-            label="Upcoming" 
-            value={stats.upcoming} 
-            accent={{ text: 'text-cyan-600 dark:text-cyan-400', bg: 'from-cyan-500 to-blue-500' }} 
-          />
-          <StatCard 
-            label="Action Required" 
-            value={stats.pending} 
-            accent={{ text: 'text-orange-600 dark:text-orange-400', bg: 'from-orange-500 to-yellow-500' }} 
-          />
-          <StatCard 
-            label="Cancelled" 
-            value={stats.cancelled} 
-            accent={{ text: 'text-red-600 dark:text-red-400', bg: 'from-red-500 to-rose-500' }} 
-          />
+          <StatCard label="Total Tickets" value={stats.total} />
+          <StatCard label="Upcoming" value={stats.upcoming} />
+          <StatCard label="Action Required" value={stats.pending} />
+          <StatCard label="Cancelled" value={stats.cancelled} />
         </div>
 
-        {/* Filter Toolbar */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 rounded-2xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-sm">
-          {/* Search */}
           <div className="relative flex-1 w-full min-w-0">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <SearchIcon />
@@ -232,23 +220,22 @@ export default function MyTicketPage() {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="w-full sm:w-auto shrink-0">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[200px] h-[42px] px-4 py-2.5 rounded-xl border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 focus:ring-cyan-500/50">
+              <SelectTrigger className="w-full sm:w-[200px] h-[42px] px-4 py-2.5 rounded-xl border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
-                <SelectItem value="ALL" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer">All Status</SelectItem>
-                <SelectItem value="CONFIRMED" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer">Confirmed</SelectItem>
-                <SelectItem value="PENDING" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer">Pending</SelectItem>
-                <SelectItem value="CANCELLED" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer">Cancelled</SelectItem>
+                <SelectItem value="ALL" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">All Status</SelectItem>
+                <SelectItem value="CONFIRMED" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Confirmed</SelectItem>
+                <SelectItem value="PENDING_PAYMENT" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Pending</SelectItem>
+                <SelectItem value="RESERVED" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Reserved</SelectItem>
+                <SelectItem value="CANCELLED" className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tickets Grid */}
         {filteredTickets.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredTickets.map(ticket => (
@@ -262,7 +249,7 @@ export default function MyTicketPage() {
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">No tickets found</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-              We couldn't find any tickets matching your current search and filter criteria.
+              We couldn't find any tickets matching your search criteria.
             </p>
           </div>
         )}

@@ -436,7 +436,7 @@ model Checkin {
   id                 BigInt    @id @default(autoincrement())
   registration_id    BigInt    @unique
   scanned_by_user_id BigInt
-  qr_code_id         BigInt
+  qr_code_id         BigInt?
   is_offline         Boolean   @default(false)
   device_id          String?   @db.VarChar(255)
   client_timestamp   DateTime?
@@ -446,7 +446,7 @@ model Checkin {
 
   registration Registration @relation(fields: [registration_id], references: [id])
   scanned_by   User         @relation(fields: [scanned_by_user_id], references: [id])
-  qr_code      QrCode       @relation(fields: [qr_code_id], references: [id])
+  qr_code      QrCode?      @relation(fields: [qr_code_id], references: [id])
 
   @@map("checkins")
 }

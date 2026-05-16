@@ -4,6 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Workshop } from '../types';
+import { useCheckin } from '@/features/qrcode/hooks/useCheckin';
+import { getDb } from '@/shared/utils/db';
+import { useState, useEffect } from 'react';
 
 interface WorkshopCardProps {
   workshop: Workshop;
@@ -13,6 +16,32 @@ interface WorkshopCardProps {
 export function WorkshopCard({ workshop, onPress }: WorkshopCardProps) {
   const startTime = new Date(workshop.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const isOngoing = new Date(workshop.start_date) <= new Date() && new Date() <= new Date(workshop.end_date);
+  
+  const { syncTicketsFromServer } = useCheckin();
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    const checkDownloaded = async () => {
+      const db = await getDb();
+      const count: any = await db.getFirstAsync('SELECT COUNT(*) as cnt FROM tickets WHERE wid = ?', [workshop.id.toString()]);
+      setIsDownloaded(count?.cnt > 0);
+    };
+    checkDownloaded();
+  }, [workshop.id]);
+
+  const handleDownload = async (e: any) => {
+    e.stopPropagation();
+    setIsDownloading(true);
+    try {
+      const result = await syncTicketsFromServer(workshop.id, workshop.title);
+      if (result.success) {
+        setIsDownloaded(true);
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.cardContainer}>
@@ -31,6 +60,21 @@ export function WorkshopCard({ workshop, onPress }: WorkshopCardProps) {
               <ThemedText style={styles.paidText}>PREMIUM</ThemedText>
             </View>
           )}
+          <TouchableOpacity 
+            onPress={handleDownload} 
+            disabled={isDownloading}
+            style={[styles.downloadBtn, isDownloaded && styles.downloadedBtn]}
+          >
+            {isDownloading ? (
+              <View style={styles.spinning}><IconSymbol name="arrow.triangle.2.circlepath" size={14} color="#FFF" /></View>
+            ) : (
+              <IconSymbol 
+                name={isDownloaded ? "arrow.clockwise.circle.fill" : "arrow.down.circle"} 
+                size={18} 
+                color={isDownloaded ? "#10B981" : "#007AFF"} 
+              />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Title */}
@@ -48,19 +92,19 @@ export function WorkshopCard({ workshop, onPress }: WorkshopCardProps) {
           </View>
         </View>
 
-        {/* Check-in Progress */}
+        {/* Registration Progress */}
         <View style={styles.progressSection}>
           <View style={styles.progressHeader}>
-            <ThemedText style={styles.progressLabel}>CHECK-IN PROGRESS</ThemedText>
+            <ThemedText style={styles.progressLabel}>REGISTRATION</ThemedText>
             <ThemedText style={styles.progressValue}>
-              {workshop.checkin_count}/{workshop.available_seats}
+              {workshop.registration_count}/{workshop.capacity}
             </ThemedText>
           </View>
           <View style={styles.progressBarBg}>
             <View 
               style={[
                 styles.progressBarFill, 
-                { width: `${Math.min((workshop.checkin_count / workshop.available_seats) * 100, 100)}%` }
+                { width: `${Math.min(((workshop.registration_count || 0) / (workshop.capacity || 1)) * 100, 100)}%` }
               ]} 
             />
           </View>
@@ -204,4 +248,19 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     letterSpacing: 1,
   },
+  downloadBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  downloadedBtn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  spinning: {
+    opacity: 0.8,
+  }
 });

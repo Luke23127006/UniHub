@@ -1,32 +1,42 @@
 import { useLocation, Link, useSearchParams } from 'react-router';
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { ticketApi } from '../api';
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const ticketId = searchParams.get('ticketId') || 'N/A';
   
   const [qrToken, setQrToken] = useState(null);
+  const [status, setStatus] = useState('PENDING');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (ticketId !== 'N/A') {
-      const token = localStorage.getItem('auth_token');
-      fetch(`/api/v1/checkin/ticket/${ticketId}/qr`, {
-        headers: { 
-          'Authorization': `Bearer ${token}` 
+    let pollInterval;
+
+    const checkStatus = async () => {
+      try {
+        const data = await ticketApi.getRegistrationStatus(ticketId);
+        setStatus(data.status);
+        
+        if (data.status === 'CONFIRMED') {
+          setQrToken(data.checkin_token);
+          setLoading(false);
+          if (pollInterval) clearInterval(pollInterval);
         }
-      })
-        .then(res => res.json())
-        .then(data => {
-          setQrToken(data.qrToken);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error('Failed to fetch QR token', err);
-          setLoading(false);
-        });
+      } catch (err) {
+        console.error('Polling failed', err);
+      }
+    };
+
+    if (ticketId !== 'N/A') {
+      checkStatus(); // Initial check
+      pollInterval = setInterval(checkStatus, 2000);
     }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [ticketId]);
 
   return (
@@ -58,8 +68,10 @@ export default function PaymentSuccessPage() {
             <div className="flex flex-col items-center">
                 <div className="bg-white p-4 rounded-3xl shadow-inner mb-6 border border-gray-50">
                     {loading ? (
-                      <div className="w-[180px] h-[180px] flex items-center justify-center bg-gray-50 rounded-2xl animate-pulse">
-                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Generating...</span>
+                      <div className="w-[180px] h-[180px] flex items-center justify-center bg-gray-50 rounded-2xl animate-pulse text-center p-4">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-relaxed">
+                          {status === 'CONFIRMED' ? 'Generating QR...' : 'Verifying Transaction...'}
+                        </span>
                       </div>
                     ) : qrToken ? (
                       <QRCodeSVG 

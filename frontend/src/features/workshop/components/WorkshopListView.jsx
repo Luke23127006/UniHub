@@ -26,7 +26,7 @@ function SeatsPill({ capacity, available }) {
 
   return (
     <span className={`text-xs font-mono font-bold ${color} tracking-tighter`}>
-      {isFull ? 'FULL' : `${available}/${capacity}`}
+      {isFull ? 'FULL' : `${capacity - available}/${capacity}`}
     </span>
   );
 }

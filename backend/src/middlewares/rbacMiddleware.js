@@ -9,6 +9,7 @@ const requireRoles = (allowedRoles) => (req, res, next) => {
     return next();
   }
 
+  console.warn(`[requireRoles] Access denied for user ${req.user?.sub}. Role: ${role}. Required: ${allowedRoles.join(', ')}`);
   return res.status(403).json({
     status: 'error',
     error: {

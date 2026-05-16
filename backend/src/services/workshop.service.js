@@ -35,6 +35,20 @@ class WorkshopService {
             include: {
               speaker: true
             }
+          },
+          _count: {
+            select: {
+              registrations: true
+            }
+          },
+          // We can't easily count "registrations with checkin" via _count select
+          // so we'll fetch the registrations with their checkin status
+          registrations: {
+            select: {
+              id: true,
+              status: true,
+              checkin: { select: { id: true } }
+            }
           }
         },
         orderBy: { event_day: 'asc' },
@@ -43,19 +57,33 @@ class WorkshopService {
       })
     ]);
 
-    // Flatten speakers and format BigInt to string
-    const formattedWorkshops = workshops.map(ws => ({
-      ...ws,
-      id: ws.id.toString(),
-      room_id: ws.room_id.toString(),
-      created_by: ws.created_by.toString(),
-      price: ws.price ? parseFloat(ws.price.toString()) : null,
-      speakers: ws.workshop_speakers.map(wsSpeaker => ({
-        ...wsSpeaker.speaker,
-        id: wsSpeaker.speaker.id.toString(),
-        is_main: wsSpeaker.is_main_speaker
-      }))
-    }));
+    // Flatten speakers and calculate counts
+    const formattedWorkshops = workshops.map(ws => {
+      // "Occupied" means any registration that isn't cancelled
+      const occupiedRegs = ws.registrations.filter(r => 
+        ['confirmed', 'pending_payment', 'attended'].includes(r.status)
+      );
+      const checkinCount = ws.registrations.filter(r => r.checkin).length;
+
+      const { registrations, ...wsData } = ws; 
+
+      return {
+        ...wsData,
+        id: ws.id.toString(),
+        room_id: ws.room_id.toString(),
+        created_by: ws.created_by.toString(),
+        price: ws.price ? parseFloat(ws.price.toString()) : null,
+        capacity: ws.capacity,
+        registration_count: occupiedRegs.length,
+        checkin_count: checkinCount,
+        available_seats: ws.capacity - occupiedRegs.length,
+        speakers: ws.workshop_speakers.map(wsSpeaker => ({
+          ...wsSpeaker.speaker,
+          id: wsSpeaker.speaker.id.toString(),
+          is_main: wsSpeaker.is_main_speaker
+        }))
+      };
+    });
 
     return {
       total,

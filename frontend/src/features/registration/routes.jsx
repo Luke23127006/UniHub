@@ -1,4 +1,4 @@
-import MyTicketPage from './pages/MyTicketPage';
+import MyTicketPage, { loader as MyTicketLoader } from './pages/MyTicketPage';
 import TicketDetailPage, { loader as TicketDetailLoader } from './pages/TicketDetailPage';
 import RegistrationPage, { loader as RegistrationLoader, action as RegistrationAction } from './pages/RegistrationPage';
 import CheckoutPage, { loader as CheckoutLoader, action as CheckoutAction } from './pages/CheckoutPage';
@@ -9,6 +9,7 @@ export const registrationRoutes = [
   {
     path: 'my-tickets',
     element: <MyTicketPage />,
+    loader: MyTicketLoader,
   },
   {
     path: 'my-tickets/:id',
