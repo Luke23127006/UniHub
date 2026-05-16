@@ -153,6 +153,25 @@ class RegistrationController {
       return res.status(500).json({ message: error.message });
     }
   }
+
+  static async cancelRegistration(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.sub; // From authMiddleware (JWT 'sub' field)
+
+      const result = await RegistrationService.cancelTicket(id, userId);
+
+      return res.status(200).json({
+        message: 'Registration cancelled successfully',
+        registration: result
+      });
+    } catch (error) {
+      console.error('[RegistrationController] cancelRegistration error:', error);
+      return res.status(error.statusCode || 500).json({
+        message: error.message || 'Internal server error'
+      });
+    }
+  }
 }
 
 module.exports = RegistrationController;

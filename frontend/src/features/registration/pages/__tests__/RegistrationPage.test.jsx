@@ -40,6 +40,7 @@ function renderPage(workshop = mockWorkshop) {
       },
       { path: '/my-tickets/:id', element: <div data-testid="ticket-page" /> },
       { path: '/checkout/:id', element: <div data-testid="checkout-page" /> },
+      { path: '/payment/success', element: <div data-testid="success-page" /> },
     ],
     { initialEntries: ['/workshops/1/register'] }
   );
@@ -62,7 +63,7 @@ describe('RegistrationPage', () => {
   });
 
   it('calls register API when confirm button is clicked', async () => {
-    ticketApi.register.mockResolvedValueOnce({ id: 'TKT-123', status: 'CONFIRMED' });
+    ticketApi.register.mockResolvedValueOnce({ id: 'TKT-123', status: 'CONFIRMED', requires_payment: false });
 
     renderPage();
 
@@ -74,6 +75,32 @@ describe('RegistrationPage', () => {
     });
   });
 
+  it('redirects to checkout page if payment is required', async () => {
+    ticketApi.register.mockResolvedValueOnce({ id: 'TKT-999', requires_payment: true });
+
+    renderPage();
+
+    const confirmButton = await screen.findByText(/Complete Registration/i);
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('checkout-page')).toBeInTheDocument();
+    });
+  });
+
+  it('shows loading state when finalizing registration', async () => {
+    // Delay the API response to capture the loading state
+    ticketApi.register.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: '1' }), 100)));
+
+    renderPage();
+
+    const confirmButton = await screen.findByText(/Complete Registration/i);
+    fireEvent.click(confirmButton);
+
+    // Use findByText which is more resilient to async updates
+    expect(await screen.findByText(/Finalizing\.\.\./i)).toBeInTheDocument();
+  });
+
   it('shows error message if registration fails', async () => {
     ticketApi.register.mockRejectedValueOnce(new Error('API Error'));
 
@@ -83,7 +110,7 @@ describe('RegistrationPage', () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Registration failed. Please try again later./i)).toBeInTheDocument();
+      expect(screen.getByText(/API Error/i)).toBeInTheDocument();
     });
   });
 
