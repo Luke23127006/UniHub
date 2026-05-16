@@ -26,6 +26,27 @@ function formatPrice(price, currency) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price);
 }
 
+// ─── Icons ───────────────────────────────────────────────────────────────────
+
+const CalendarIcon = () => (
+  <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const MapPinIcon = () => (
+  <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
 export default function TicketDetailPage() {
   const ticket = useLoaderData();
 
@@ -235,151 +256,6 @@ export default function TicketDetailPage() {
         </div>
       </div>
 
-      {/* Ticket Layout */}
-      <div className={`relative bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden ${isCancelled ? 'opacity-75 grayscale-[0.5]' : ''}`}>
-        
-        {/* Status Banner for Cancelled */}
-        {isCancelled && (
-          <div className="absolute top-12 -right-16 rotate-45 bg-rose-500 text-white px-20 py-2 text-xs font-black uppercase tracking-widest shadow-lg z-20">
-            Cancelled
-          </div>
-        )}
-
-        {/* Top Section: Workshop Info */}
-        <div className="p-8 sm:p-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-            <div className="flex-1">
-              <span className="inline-block px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-900/20 text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-4 border border-cyan-100 dark:border-cyan-800/30">
-                Workshop Access Pass
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white leading-tight">
-                {ticket.workshop.title}
-              </h1>
-            </div>
-            <div className="shrink-0 flex flex-col items-end">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ticket ID</span>
-              <span className="text-sm font-mono font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-100 dark:border-gray-700">
-                {ticket.id}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-y border-dashed border-gray-200 dark:border-gray-700">
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <CalendarIcon />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date & Time</p>
-                  <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white">{formatDateTime(ticket.workshop.start_time)}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <MapPinIcon />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</p>
-                  <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
-                    {ticket.workshop.room?.room_code}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{ticket.workshop.room?.building}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <UserIcon />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attendee</p>
-                  <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white">Student Hub Member</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">student@unihub.edu.vn</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Section: QR Stub */}
-            <div className="w-full md:w-64 bg-gray-50/50 dark:bg-gray-800/30 p-6 flex flex-col items-center justify-center relative">
-
-              {/* Optimized scan animation - Only active for valid tickets */}
-              {ticket.status === 'CONFIRMED' && (
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/90 to-transparent animate-[scan_3s_linear_infinite] will-change-[top,opacity] z-20 print:hidden"></div>
-              )}
-
-              <div className="relative p-4 mb-4">
-                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-cyan-500/30 rounded-tl-sm"></div>
-                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-cyan-500/30 rounded-tr-sm"></div>
-                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-cyan-500/30 rounded-bl-sm"></div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-cyan-500/30 rounded-br-sm"></div>
-
-                <div className={`bg-white p-2 rounded-lg shadow-sm transition-opacity duration-500 ${ticket.status !== 'CONFIRMED' ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-                  <QRCodeSVG
-                    value={ticket.checkin_token || ticket.id}
-                    size={100}
-                    level="M"
-                    fgColor={ticket.status === 'CONFIRMED' ? "#0f172a" : "#94a3b8"}
-                  />
-                  {ticket.status !== 'CONFIRMED' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="bg-white/90 px-2 py-1 rounded text-[8px] font-black text-rose-500 border border-rose-200 uppercase tracking-tighter">INVALID</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-1 pb-0.5 ${ticket.status === 'CONFIRMED' ? 'text-cyan-600 dark:text-cyan-400' : 'text-gray-400'}`}>
-                  {ticket.status === 'CONFIRMED' ? 'READY FOR CHECK-IN' : 'WAITING FOR CONFIRMATION'}
-                </p>
-                <p className="text-[7px] font-mono text-gray-400 uppercase tracking-widest pb-0.5">
-                  {ticket.status === 'CONFIRMED' ? 'UNIHUB AUTHENTICATED' : 'NOT VALID FOR ENTRY'}
-                </p>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Actions - Hidden during print */}
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4 print:hidden">
-          <button
-            onClick={handlePrint}
-            className="flex items-center justify-center gap-3 py-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-95"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            Print
-          </button>
-          <button
-            onClick={handleDownload}
-            className="flex items-center justify-center gap-3 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity active:scale-95"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Download
-          </button>
-          {!isCancelled && (
-            <button
-              onClick={async () => {
-                if (window.confirm('Are you sure you want to cancel this ticket? This action will release your seat.')) {
-                  try {
-                    await ticketApi.cancel(ticket.id);
-                    window.location.reload(); // Refresh to show cancelled state
-                  } catch (err) {
-                    alert(err.message);
-                  }
-                }
-              }}
-              className="flex items-center justify-center gap-3 py-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95 col-span-2 sm:col-span-1"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Cancel Ticket
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Footer Info */}
       <div className="mt-10 text-center">
