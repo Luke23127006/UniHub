@@ -212,7 +212,7 @@ describe('verifyToken', () => {
     delete process.env.JWT_ACCESS_SECRET; // simulate missing env var
 
     // Suppress the intentional console.error — it fires in this code path by design
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
 
     const req = { headers: { authorization: 'Bearer any.token' } };
     const res = mockRes();

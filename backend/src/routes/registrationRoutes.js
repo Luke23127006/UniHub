@@ -5,7 +5,13 @@ const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddlew
 
 const router = express.Router();
 
-// Apply mock auth middleware to extract user info
-router.post('/:id/register', workshopRegistrationLimiter, authMiddleware, RegistrationController.registerWorkshop);
+// [PHASE 5] Synchronous registration with immediate seat reservation
+router.post('/', workshopRegistrationLimiter, authMiddleware, RegistrationController.registerSynchronous);
+
+// [PHASE 5] Webhook for payment gateway
+router.post('/webhook', RegistrationController.handlePaymentWebhook);
+
+// [PHASE 6] Polling registration status
+router.get('/:id', authMiddleware, RegistrationController.getRegistrationStatus);
 
 module.exports = router;

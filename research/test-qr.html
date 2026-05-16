@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UniHub Test QR</title>
+    <style>
+        body { 
+          font-family: 'Inter', -apple-system, sans-serif; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          justify-content: center; 
+          min-height: 100vh; 
+          background: #0f172a; 
+          color: white; 
+          margin: 0;
+        }
+        .card { 
+          background: #1e293b; 
+          padding: 2.5rem; 
+          border-radius: 1.5rem; 
+          box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+          text-align: center; 
+          max-width: 450px;
+          border: 1px solid #334155;
+        }
+        h2 { color: #38bdf8; margin-top: 0; }
+        .qr-container {
+          background: white; 
+          padding: 15px; 
+          border-radius: 1rem; 
+          display: inline-block;
+          margin: 20px 0;
+        }
+        img { display: block; }
+        .info { font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px; }
+        .token-box { 
+          background: #000; 
+          padding: 12px; 
+          display: block; 
+          word-break: break-all; 
+          font-size: 0.75rem; 
+          border-radius: 8px; 
+          color: #7dd3fc;
+          font-family: monospace;
+          text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>UniHub QR Scanner Test</h2>
+        <div class="info">
+          Workshop ID: <b style="color:white">1</b><br/>
+          Ticket ID: <b style="color:white">1</b>
+        </div>
+        <div class="qr-container">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aWQiOiIxIiwidWlkIjoic3RkXzk5Iiwid2lkIjoiMSIsIm5hbWUiOiJOZ3V5ZW4gVmFuIFRlc3QiLCJpYXQiOjE3Nzg4NjQwMjJ9.2J2kR91KAkLnfyvR-HhA_I2vMBdOs7jvlGOaIW4HuRo" alt="QR Code" />
+        </div>
+        <p style="font-size: 0.8rem; margin-bottom: 5px;">JWT Token Payload:</p>
+        <div class="token-box">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aWQiOiIxIiwidWlkIjoic3RkXzk5Iiwid2lkIjoiMSIsIm5hbWUiOiJOZ3V5ZW4gVmFuIFRlc3QiLCJpYXQiOjE3Nzg4NjQwMjJ9.2J2kR91KAkLnfyvR-HhA_I2vMBdOs7jvlGOaIW4HuRo</div>
+    </div>
+</body>
+</html>

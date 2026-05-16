@@ -1,21 +1,16 @@
 const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
+const WorkshopController = require('../controllers/workshop.controller');
 
 const router = Router();
 
 // ── Public ────────────────────────────────────────────────────────────────────
-// GET /v1/workshops        – list open workshops (no auth required)
-router.get(
-  '/',
-  (req, res) => res.status(501).json({ message: 'listWorkshops – not yet implemented' })
-);
+// GET /v1/workshops        – list open workshops
+router.get('/', WorkshopController.list);
 
-// GET /v1/workshops/:id    – workshop detail + AI summary (no auth required)
-router.get(
-  '/:id',
-  (req, res) => res.status(501).json({ message: 'getWorkshop – not yet implemented' })
-);
+// GET /v1/workshops/:id    – workshop detail + AI summary
+router.get('/:id', WorkshopController.getById);
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 // POST /v1/workshops

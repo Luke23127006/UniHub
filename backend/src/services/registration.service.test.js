@@ -1,10 +1,18 @@
 'use strict';
 
 /**
- * Unit tests for RegistrationService.registerForWorkshop.
- *
+ * Unit tests for RegistrationService.
  * No real Redis, PostgreSQL, or payment gateway connections are used.
- *
+ */
+
+// Global BigInt serialization fix for Prisma (matches server.js)
+if (!BigInt.prototype.toJSON) {
+  BigInt.prototype.toJSON = function() {
+    return this.toString();
+  };
+}
+
+/**
  * prisma.$transaction is stubbed to call its callback immediately with `prisma`
  * itself as the `tx` argument. This means every `tx.*` call inside the service
  * resolves to the same mock functions as `prisma.*`, so we can chain
@@ -56,8 +64,10 @@ const WORKSHOP_PRICE = 50_000;
  *    2nd call → seat-check inside the transaction (id, available_seats)  */
 function setupWorkshop({ is_paid, price = null, available_seats = 5 }) {
   prisma.workshop.findUnique
-    .mockResolvedValueOnce({ is_paid, price })
-    .mockResolvedValueOnce({ id: WORKSHOP_DB_ID, available_seats });
+    .mockResolvedValueOnce({ is_paid, price });
+  
+  // [PHASE 5] Mock $queryRaw for the seat check (SELECT ... FOR UPDATE)
+  prisma.$queryRaw.mockResolvedValueOnce([{ id: WORKSHOP_DB_ID, available_seats }]);
 }
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
@@ -96,18 +106,15 @@ describe('RegistrationService.registerForWorkshop', () => {
 
   describe('when redlock.acquire() throws (lock contention or Redis error)', () => {
     beforeEach(() => {
-      const lockContentionError = new Error('lock already held');
-      lockContentionError.name = 'ExecutionError';
-      redlock.acquire.mockRejectedValue(lockContentionError);
+      const lockErr = new Error('ExecutionError: lock already held');
+      lockErr.name = 'ExecutionError';
+      redlock.acquire.mockRejectedValue(lockErr);
     });
 
-    it('throws a 409 error with message "Workshop is busy, please retry shortly"', async () => {
-      await expect(
-        RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
-      ).rejects.toMatchObject({
-        statusCode: 409,
-        message: 'Workshop is busy, please retry shortly',
-      });
+    it('throws a 503 error with message "Workshop registration is busy, please try again"', async () => {
+      const promise = RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
+      await expect(promise).rejects.toThrow('Workshop registration is busy, please try again');
+      await expect(promise).rejects.toMatchObject({ statusCode: 503 });
     });
 
     it('does not attempt to release the lock because it was never acquired', async () => {
@@ -155,7 +162,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       setupWorkshop({ is_paid: false, available_seats: 0 });
     });
 
-    it('throws a 409 error with message "Workshop is sold out"', async () => {
+    it('throws a 503 error with message "Workshop registration is busy, please try again"', async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
@@ -389,5 +396,56 @@ describe('RegistrationService.registerForWorkshop', () => {
 
       expect(mockLock.release).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('RegistrationService.confirmRegistration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.$transaction.mockImplementation(async (fn) => fn(prisma));
+  });
+
+  it('updates registration status to confirmed and creates a payment record', async () => {
+    prisma.registration.findUnique.mockResolvedValue({
+      id: REGISTRATION_ID,
+      status: 'pending_payment',
+      workshop: { price: WORKSHOP_PRICE }
+    });
+
+    await RegistrationService.confirmRegistration(REGISTRATION_ID);
+
+    expect(prisma.registration.update).toHaveBeenCalledWith({
+      where: { id: REGISTRATION_ID },
+      data: { 
+        status: 'confirmed',
+        confirmed_at: expect.any(Date)
+      }
+    });
+
+    expect(prisma.payment.upsert).toHaveBeenCalledWith({
+      where: { registration_id: REGISTRATION_ID },
+      update: {
+        status: 'completed',
+        completed_at: expect.any(Date)
+      },
+      create: {
+        registration_id: REGISTRATION_ID,
+        amount: WORKSHOP_PRICE,
+        currency: 'VND',
+        status: 'completed',
+        completed_at: expect.any(Date)
+      }
+    });
+  });
+
+  it('throws error if registration is not in pending_payment or reserved status', async () => {
+    prisma.registration.findUnique.mockResolvedValue({
+      id: REGISTRATION_ID,
+      status: 'cancelled',
+      workshop: { price: WORKSHOP_PRICE }
+    });
+
+    await expect(RegistrationService.confirmRegistration(REGISTRATION_ID))
+      .rejects.toThrow('Registration is not in a confirmable state');
   });
 });

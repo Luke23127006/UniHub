@@ -50,4 +50,23 @@ async function initiatePayment(registrationId, amount) {
   });
 }
 
-module.exports = { initiatePayment, isCircuitOpen, CircuitOpenError };
+/**
+ * Verifies a payment with the mock gateway.
+ * 
+ * @param {string} registrationId 
+ * @returns {Promise<{ success: boolean }>}
+ */
+async function verifyPayment(registrationId) {
+  try {
+    const response = await fetch(`${GATEWAY_URL}/payments/verify/${registrationId}`);
+    if (!response.ok) return { success: false };
+    
+    const data = await response.json();
+    return { success: data.success };
+  } catch (error) {
+    console.error('[PaymentService] Verification error:', error);
+    return { success: false };
+  }
+}
+
+module.exports = { initiatePayment, verifyPayment, isCircuitOpen, CircuitOpenError };

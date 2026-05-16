@@ -75,9 +75,9 @@ services:
       - postgres
       - redis
       - rabbitmq
+    command: sh -c "npm install && npx prisma db seed && npm run dev"
     networks:
       - unihub_network
-    command: sh -c "npm install && npm run dev"
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules

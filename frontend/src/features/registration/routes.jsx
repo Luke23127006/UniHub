@@ -22,7 +22,7 @@ export const registrationRoutes = [
     action: RegistrationAction,
   },
   {
-    path: 'checkout/:paymentId',
+    path: 'checkout/:registrationId',
     element: <CheckoutPage />,
     loader: CheckoutLoader,
     action: CheckoutAction,

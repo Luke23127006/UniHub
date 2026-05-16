@@ -3,13 +3,8 @@ import { useLoaderData, useNavigate, Link, Form, useNavigation, useActionData } 
 import { ticketApi } from '../api';
 
 export async function loader({ params }) {
-  if (!ticketApi || typeof ticketApi.getPaymentById !== 'function') {
-    console.error('ticketApi.getPaymentById is missing or not a function');
-    throw new Error('Internal Configuration Error: Payment API not initialized correctly.');
-  }
-  
-  const payment = await ticketApi.getPaymentById(params.paymentId);
-  return { payment };
+  const payment = await ticketApi.getPaymentById(params.registrationId);
+  return { payment, registrationId: params.registrationId };
 }
 
 export async function action({ params, request }) {
@@ -17,7 +12,7 @@ export async function action({ params, request }) {
   const idempotencyKey = formData.get('idempotencyKey');
 
   try {
-    const result = await ticketApi.confirmPayment(params.paymentId, idempotencyKey);
+    const result = await ticketApi.confirmPayment(params.registrationId, idempotencyKey);
     return result;
   } catch (err) {
     console.error('Payment failed', err);
@@ -43,7 +38,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (actionData?.success) {
-      navigate('/payment/success', { state: { ticketId: actionData.ticket_id } });
+      navigate(`/payment/success?ticketId=${actionData.ticket_id}`);
     } else if (actionData?.success === false) {
       navigate('/payment/failure', { state: { error: actionData.message || 'Payment failed' } });
     }
