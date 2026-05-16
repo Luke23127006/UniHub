@@ -16,5 +16,6 @@ router.use('/registrations', registrationRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/checkin', checkinRoutes);
 router.use('/payments', paymentRoutes);
+router.patch('/internal/ai-summaries/:id', require('../controllers/aiSummary.controller').updateSummary);
 
 module.exports = router;

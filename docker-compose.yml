@@ -114,6 +114,25 @@ services:
     networks:
       - unihub_network
 
+  ai-worker:
+    build:
+      context: ./ai-worker
+      dockerfile: Dockerfile
+    container_name: unihub_ai_worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - BACKEND_INTERNAL_URL=http://backend:3000/internal
+    depends_on:
+      - rabbitmq
+      - backend
+    networks:
+      - unihub_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
 volumes:
   unihub_pg_data:
   unihub_redis_data:
