@@ -14,11 +14,20 @@ class TicketController {
    * In this schema a "ticket" is a Registration record — the two terms are
    * synonymous in UniHub's domain (registrations === issued tickets).
    */
-  static async getTicketQr(req, res, next) {
+  static async getTicketQr(req, res) {
     try {
-      const registrationId = parseInt(req.params.id, 10);
+      const idParam = req.params.id;
 
-      if (!Number.isInteger(registrationId) || registrationId <= 0) {
+      if (!/^[0-9]+$/.test(idParam)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid ticket ID — must be a positive integer.',
+        });
+      }
+
+      const registrationId = BigInt(idParam);
+
+      if (registrationId <= 0n) {
         return res.status(400).json({
           status: 'error',
           message: 'Invalid ticket ID — must be a positive integer.',
@@ -62,7 +71,11 @@ class TicketController {
         data: { qr_token },
       });
     } catch (err) {
-      next(err);
+      console.error('[TicketController] getTicketQr error:', err);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate ticket QR code.',
+      });
     }
   }
 }
