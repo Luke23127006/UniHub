@@ -8,7 +8,7 @@
 // Mock fetch globally
 global.fetch = jest.fn();
 
-const { initiatePayment, verifyPayment, isCircuitOpen } = require('./paymentService');
+const { initiatePayment, verifyPayment, isCircuitOpen } = require('../paymentService');
 
 const REGISTRATION_ID = '99';
 const AMOUNT = 50000;

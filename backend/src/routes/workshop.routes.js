@@ -1,23 +1,48 @@
-'use strict';
-
-const express = require('express');
+const { Router } = require('express');
+const verifyToken = require('../middlewares/authMiddleware');
+const requireRoles = require('../middlewares/rbacMiddleware');
 const WorkshopController = require('../controllers/workshop.controller');
-const RegistrationController = require('../controllers/registrationController');
-const realtimeController = require('../controllers/realtime.controller');
-const authMiddleware = require('../middlewares/authMiddleware');
-const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
 
-const router = express.Router();
+const router = Router();
 
-// Real-time seat availability — specific paths before /:id to avoid capture
-router.get('/seats/stream', realtimeController.streamSeats);
-router.get('/seats/batch', realtimeController.getSeatsBatch);
+// ── Public ────────────────────────────────────────────────────────────────────
+// GET /v1/workshops        – list open workshops
+router.get('/', WorkshopController.list);
 
-// Workshop listing and detail
-router.get('/', WorkshopController.getAllWorkshops);
-router.get('/:id', WorkshopController.getWorkshopById);
+// GET /v1/workshops/:id    – workshop detail + AI summary
+router.get('/:id', WorkshopController.getById);
 
-// Registration — authenticate first so downstream middleware has a trusted user identity
-router.post('/:id/register', authMiddleware, workshopRegistrationLimiter, RegistrationController.registerWorkshop);
+// ── Admin ─────────────────────────────────────────────────────────────────────
+// POST /v1/workshops
+router.post(
+  '/',
+  verifyToken,
+  requireRoles(['Admin']),
+  (req, res) => res.status(501).json({ message: 'createWorkshop – not yet implemented' })
+);
+
+// PUT /v1/workshops/:id
+router.put(
+  '/:id',
+  verifyToken,
+  requireRoles(['Admin']),
+  (req, res) => res.status(501).json({ message: 'updateWorkshop – not yet implemented' })
+);
+
+// DELETE /v1/workshops/:id
+router.delete(
+  '/:id',
+  verifyToken,
+  requireRoles(['Admin']),
+  (req, res) => res.status(501).json({ message: 'deleteWorkshop – not yet implemented' })
+);
+
+// GET /v1/workshops/:id/stats  – Admin and Staff
+router.get(
+  '/:id/stats',
+  verifyToken,
+  requireRoles(['Admin', 'Staff']),
+  (req, res) => res.status(501).json({ message: 'workshopStats – not yet implemented' })
+);
 
 module.exports = router;
