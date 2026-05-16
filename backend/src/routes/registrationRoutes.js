@@ -17,4 +17,7 @@ router.post('/webhook', RegistrationController.handlePaymentWebhook);
 // [PHASE 6] Polling registration status
 router.get('/:id', authMiddleware, RegistrationController.getRegistrationStatus);
 
+// [PHASE 6] Cancel registration
+router.post('/:id/cancel', authMiddleware, RegistrationController.cancelRegistration);
+
 module.exports = router;

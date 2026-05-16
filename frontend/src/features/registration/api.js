@@ -21,7 +21,7 @@ export const MOCK_TICKETS = [
       start_time: '2026-05-22T14:00:00Z',
       room: { room_code: 'A-204', building: 'Main Campus' }
     },
-    status: 'PENDING',
+    status: 'PENDING_PAYMENT',
     payment_status: 'PENDING',
     price: 100000,
     currency: 'VND',
@@ -142,6 +142,19 @@ export const ticketApi = {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Payment confirmation failed');
+    }
+    return await response.json();
+  },
+
+  async cancel(id) {
+    const response = await fetch(`/api/v1/registrations/${id}/cancel`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to cancel registration');
     }
     return await response.json();
   }

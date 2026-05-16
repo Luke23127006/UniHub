@@ -216,9 +216,16 @@ export default function CheckoutPage() {
                 </div>
 
                 {error && (
-                  <div className="mt-6 p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest flex items-center gap-3 font-mono">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                    ERROR: {error}
+                  <div className="mt-6 p-4 rounded-lg bg-rose-500/5 border border-rose-500/10 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 text-[9px] font-black uppercase tracking-widest flex flex-col gap-3 font-mono">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                      ERROR: {error}
+                    </div>
+                    {error.includes('expired') || error.includes('not found') ? (
+                      <Link to="/" className="text-cyan-500 hover:underline decoration-cyan-500/30">
+                        &gt; RESTART_REGISTRATION_FLOW
+                      </Link>
+                    ) : null}
                   </div>
                 )}
 

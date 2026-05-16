@@ -64,28 +64,12 @@ async function _releaseReservedSeats() {
 
   for (const registration of staleRegistrations) {
     try {
-      await prisma.$transaction(async (tx) => {
-        const { count } = await tx.registration.updateMany({
-          where: { 
-            id: registration.id, 
-            status: { in: ['pending_payment', 'reserved'] } 
-          },
-          data: {
-            status: 'cancelled',
-            cancelled_at: new Date(),
-            cancellation_reason: 'System: Payment timeout (15 minutes)',
-          },
-        });
+      const success = await RegistrationService.cleanupExpiredRegistration(
+        registration.id,
+        registration.workshop_id
+      );
 
-        if (count > 0) {
-          await tx.workshop.update({
-            where: { id: registration.workshop_id },
-            data: { available_seats: { increment: 1 } },
-          });
-        }
-      });
-
-      released++;
+      if (success) released++;
     } catch (err) {
       failed++;
       console.error(
