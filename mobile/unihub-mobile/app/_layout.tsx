@@ -2,11 +2,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/shared/hooks/use-auth';
 import { WorkshopProvider } from '@/features/workshop/context/WorkshopContext';
+import { resetAppData } from '@/resetDB/reset';
+
+// Toggle this to true to wipe all local data for testing
+const SHOULD_RESET_DATA = false;
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -17,9 +21,21 @@ export default function RootLayout() {
   const { isLoggedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [isResetting, setIsResetting] = useState(__DEV__ && SHOULD_RESET_DATA);
 
   useEffect(() => {
-    if (isLoggedIn === null) return;
+    const performReset = async () => {
+      if (__DEV__ && SHOULD_RESET_DATA) {
+        console.log('🔄 [RootLayout] Data reset enabled, wiping data...');
+        await resetAppData();
+      }
+      setIsResetting(false);
+    };
+    performReset();
+  }, []);
+
+  useEffect(() => {
+    if (isResetting || isLoggedIn === null) return;
 
     const inAuthGroup = segments[0] === 'login';
 
@@ -30,7 +46,9 @@ export default function RootLayout() {
       // Redirect away from the login page if logged in
       router.replace('/(tabs)');
     }
-  }, [isLoggedIn, segments, router]);
+  }, [isLoggedIn, segments, router, isResetting]);
+
+  if (isResetting) return null;
 
   return (
     <WorkshopProvider>
