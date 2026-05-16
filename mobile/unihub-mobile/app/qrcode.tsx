@@ -1,13 +1,13 @@
+import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import QRCodeScanner from '@/features/qrcode/components/QRCodeScanner';
-import { useWorkshop } from '@/features/workshop/context/WorkshopContext';
+import { MOCK_WORKSHOPS } from '@/features/workshop/constants/mock-data';
 
 export default function QRCodeRoute() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { workshops } = useWorkshop();
   
-  const workshop = workshops.find(w => w.id === id);
+  const workshop = MOCK_WORKSHOPS.find(w => w.id === id);
 
   return (
     <QRCodeScanner 

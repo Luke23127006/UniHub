@@ -1,43 +1,22 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { AuthService } from '@/features/auth/services/AuthService';
 
-// Priority: 1. Env variable, 2. Auto-detected host IP, 3. localhost
+// For physical devices or simulators, we dynamically get the host IP running Expo
 const debuggerHost = Constants.expoConfig?.hostUri;
-const autoHost = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
-const envHost = process.env.EXPO_PUBLIC_API_URL;
+const host = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
 
-export const API_BASE_URL = envHost || `http://${autoHost}:3000`;
+export const API_BASE_URL = `http://${host}:3000`;
 
 export const apiClient = {
   /**
    * Generic fetch wrapper with base URL and default headers
    */
-  async request(endpoint: string, options: any = {}) {
-    let url = `${API_BASE_URL}/api${endpoint}`;
+  async request(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE_URL}/api${endpoint}`;
     
-    // Append query params if they exist
-    if (options.params) {
-      const queryParams = new URLSearchParams();
-      Object.entries(options.params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, String(value));
-        }
-      });
-      const queryString = queryParams.toString();
-      if (queryString) {
-        url += (url.includes('?') ? '&' : '?') + queryString;
-      }
-    }
-
-    const token = await AuthService.getToken();
-    
-    const defaultHeaders: Record<string, string> = {
+    const defaultHeaders = {
       'Content-Type': 'application/json',
     };
-
-    if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
-    }
 
     const config = {
       ...options,
@@ -62,11 +41,10 @@ export const apiClient = {
       return {
         ok: true,
         status: response.status,
-        // If the response body itself is the data (like an array), use it directly.
-        // Otherwise, look for a .data property (common for paginated results).
-        data: (data && typeof data === 'object' && 'data' in data) ? data.data : data,
+        data: data.data,
       };
     } catch (error) {
+      console.error('API Request Error:', error);
       return {
         ok: false,
         status: 500,

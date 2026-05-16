@@ -1,4 +1,3 @@
-const prisma = require('../config/db');
 const AuthService = require('../services/auth.service');
 
 class AuthController {
@@ -37,29 +36,6 @@ class AuthController {
           message: error.message
         }
       });
-    }
-  }
-
-  static async getMe(req, res) {
-    try {
-      const { sub } = req.user;
-      const user = await prisma.user.findUnique({
-        where: { id: BigInt(sub) },
-        include: { user_roles: { include: { role: true } } }
-      });
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.json({
-        id: user.id.toString(),
-        email: user.email,
-        full_name: user.full_name,
-        role: user.user_roles[0]?.role.name || 'Student'
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
     }
   }
 }

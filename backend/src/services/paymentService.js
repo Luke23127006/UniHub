@@ -58,30 +58,13 @@ async function initiatePayment(registrationId, amount) {
  */
 async function verifyPayment(registrationId) {
   try {
-    return await paymentCircuit.fire(async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${GATEWAY_URL}/payments/verify/${registrationId}`, {
-          signal: controller.signal
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Mock gateway responded with HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return { success: data.success };
-      } catch (error) {
-        console.error('[PaymentService] Verification error:', error.message);
-        throw error; // Rethrow to trigger circuit breaker failure
-      } finally {
-        clearTimeout(timer);
-      }
-    });
+    const response = await fetch(`${GATEWAY_URL}/payments/verify/${registrationId}`);
+    if (!response.ok) return { success: false };
+    
+    const data = await response.json();
+    return { success: data.success };
   } catch (error) {
-    // If it's a CircuitOpenError or fetch error, return failure
+    console.error('[PaymentService] Verification error:', error);
     return { success: false };
   }
 }

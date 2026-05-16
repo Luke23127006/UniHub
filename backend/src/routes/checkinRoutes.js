@@ -16,16 +16,10 @@ router.get(
   requireRoles(['Staff']),
   async (req, res) => {
     try {
-      console.log(`[CheckinRoutes] Fetching tickets for workshop: ${req.params.id}`);
       const tickets = await CheckinService.getValidTickets(req.params.id);
-      console.log(`[CheckinRoutes] Found ${tickets.length} tickets.`);
       res.json(tickets);
     } catch (error) {
-      console.error(`[CheckinRoutes] Error for workshop ${req.params.id}:`, error.message);
-      res.status(error.statusCode || 500).json({ 
-        status: 'error',
-        error: { message: error.message }
-      });
+      res.status(error.statusCode || 500).json({ message: error.message });
     }
   }
 );
@@ -45,7 +39,7 @@ router.post(
         return res.status(400).json({ message: 'checkins must be an array' });
       }
       
-      const results = await CheckinService.syncCheckins(checkins, req.user.sub, deviceId);
+      const results = await CheckinService.syncCheckins(checkins, req.user.id, deviceId);
       res.json(results);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -62,33 +56,10 @@ router.get(
   verifyToken,
   async (req, res) => {
     try {
-      const qrToken = await TicketService.generateTicketJWT(req.params.id, req.user.sub);
+      const qrToken = await TicketService.generateTicketJWT(req.params.id, req.user.id);
       res.json({ qrToken });
     } catch (error) {
       res.status(error.statusCode || 500).json({ message: error.message });
-    }
-  }
-);
-
-/**
- * GET /v1/checkin/history
- * Fetches check-in history.
- */
-router.get(
-  '/history',
-  verifyToken,
-  requireRoles(['Staff']),
-  async (req, res) => {
-    try {
-      const { page, limit, search } = req.query;
-      const history = await CheckinService.getCheckinHistory({ 
-        page: parseInt(page) || 1, 
-        limit: parseInt(limit) || 20, 
-        search 
-      });
-      res.json(history);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
     }
   }
 );

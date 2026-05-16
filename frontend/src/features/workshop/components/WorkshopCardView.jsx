@@ -55,8 +55,9 @@ function formatTime(isoStr) {
 
 function formatPrice(price, currency) {
   if (!price) return 'FREE ACCESS';
-  if (currency === 'VND') return `${price.toLocaleString('vi-VN')} VND`;
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price);
+  const validCurrency = currency || 'VND';
+  if (validCurrency === 'VND') return `${price.toLocaleString('vi-VN')} VND`;
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: validCurrency }).format(price);
 }
 
 export default function WorkshopCardView({ workshops }) {
