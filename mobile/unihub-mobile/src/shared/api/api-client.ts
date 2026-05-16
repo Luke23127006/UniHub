@@ -1,11 +1,12 @@
 import Constants from 'expo-constants';
 import { AuthService } from '@/features/auth/services/AuthService';
 
-// For physical devices or simulators, we dynamically get the host IP running Expo
+// Priority: 1. Env variable, 2. Auto-detected host IP, 3. localhost
 const debuggerHost = Constants.expoConfig?.hostUri;
-const host = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
+const autoHost = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
+const envHost = process.env.EXPO_PUBLIC_API_URL;
 
-export const API_BASE_URL = `http://${host}:3000`;
+export const API_BASE_URL = envHost || `http://${autoHost}:3000`;
 
 export const apiClient = {
   /**

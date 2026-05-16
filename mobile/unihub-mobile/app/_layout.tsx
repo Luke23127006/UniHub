@@ -10,7 +10,7 @@ import { WorkshopProvider } from '@/features/workshop/context/WorkshopContext';
 import { resetAppData } from '@/resetDB/reset';
 
 // Toggle this to true to wipe all local data for testing
-const SHOULD_RESET_DATA = false;
+const SHOULD_RESET_DATA = true;
 
 export const unstable_settings = {
   anchor: '(tabs)',
