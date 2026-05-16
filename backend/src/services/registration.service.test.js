@@ -415,6 +415,12 @@ describe('RegistrationService.confirmRegistration', () => {
       workshop: { price: WORKSHOP_PRICE }
     });
 
+    prisma.registration.update.mockResolvedValue({
+      id: REGISTRATION_ID,
+      status: 'confirmed',
+      workshop: { price: WORKSHOP_PRICE }
+    });
+
     await RegistrationService.confirmRegistration(REGISTRATION_ID);
 
     expect(prisma.registration.update).toHaveBeenCalledWith({
@@ -422,6 +428,10 @@ describe('RegistrationService.confirmRegistration', () => {
       data: { 
         status: 'confirmed',
         confirmed_at: expect.any(Date)
+      },
+      include: {
+        student: true,
+        workshop: true
       }
     });
 
