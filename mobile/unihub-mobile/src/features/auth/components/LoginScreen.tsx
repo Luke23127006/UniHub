@@ -6,13 +6,10 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
   ActivityIndicator,
-  useWindowDimensions,
   ScrollView,
   Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Animated, {
   useSharedValue,
@@ -33,9 +30,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../services/AuthService';
 
 export default function LoginScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { setLoggedIn } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -57,7 +52,7 @@ export default function LoginScreen() {
     gridPulse.value = withRepeat(withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }), -1, true);
     corePulse.value = withRepeat(withTiming(1.1, { duration: 2500, easing: Easing.inOut(Easing.ease) }), -1, true);
     entrance.value = withSpring(1, { damping: 20, stiffness: 80 });
-  }, []);
+  }, [corePulse, entrance, gridPulse, rot1, rot2, rot3]);
 
   const orbit1Anim = useAnimatedStyle(() => ({ transform: [{ rotate: `${rot1.value * 360}deg` }] }));
   const orbit2Anim = useAnimatedStyle(() => ({ transform: [{ rotate: `${-rot2.value * 360}deg` }] }));

@@ -4,7 +4,7 @@ import { AuthService } from '@/features/auth/services/AuthService';
 // Simulate global state
 let globalIsLoggedIn = false;
 let globalUser: any = null;
-let listeners: Array<(val: boolean, user: any) => void> = [];
+let listeners: ((val: boolean, user: any) => void)[] = [];
 
 export function useAuth() {
   const [isLoggedIn, setIsLoggedInState] = useState<boolean | null>(null);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import HistoryScreen from '../HistoryScreen';
 import { HistoryService } from '../../services/HistoryService';
 
@@ -36,7 +36,7 @@ describe('HistoryScreen Pagination', () => {
 
   it('loads more data when reaching the end of the list', async () => {
     const fetchSpy = jest.spyOn(HistoryService, 'fetchHistory');
-    const { getByTestId, findByText } = render(<HistoryScreen />);
+    render(<HistoryScreen />);
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
 

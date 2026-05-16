@@ -74,7 +74,7 @@ export default function ProfileScreen() {
 
             <View style={styles.identityDetails}>
               <ThemedText style={styles.userName}>{user?.full_name || 'ANONYMOUS STAFF'}</ThemedText>
-              <ThemedText style={styles.userRole}>// AUTHORIZED_PERSONNEL // {user?.role || 'SYSTEM_OPERATOR'}</ThemedText>
+              <ThemedText style={styles.userRole}>{"// AUTHORIZED_PERSONNEL // "}{user?.role || 'SYSTEM_OPERATOR'}</ThemedText>
             </View>
 
             <View style={styles.dataGrid}>

@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 // For physical devices or simulators, we dynamically get the host IP running Expo
