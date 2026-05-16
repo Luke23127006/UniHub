@@ -9,7 +9,7 @@
     "csv:generate": "python data/generate_students_csv.py",
     "csv:sync": "node src/jobs/csvSyncWorker.js",
     "csv:test": "node src/jobs/csvSyncWorker.test.js",
-    "test": "jest"
+    "test": "cross-env NODE_ENV=test jest"
   },
   "jest": {
     "testEnvironment": "node",
