@@ -117,14 +117,14 @@ export const ticketApi = {
   },
 
   async getPaymentById(paymentId) {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     return {
       id: paymentId,
       amount: 50000,
-      currency: 'VND',
+      currency: "VND",
       workshop: {
-        title: 'Professional Workshop',
-        room: { room_code: 'A-101', building: 'Main Hall' }
+        title: "Professional Workshop",
+        room: { room_code: "A-101", building: "Main Hall" },
       },
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     };
