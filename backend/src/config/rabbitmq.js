@@ -4,19 +4,31 @@ let connection = null;
 let channel = null;
 
 async function connectRabbitMQ() {
-  try {
-    const amqpUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-    connection = await amqp.connect(amqpUrl);
-    channel = await connection.createChannel();
-    console.log('Connected to RabbitMQ successfully');
-    
-    // Assert the queue exists
-    await channel.assertQueue('workshop_registration_queue', { durable: true });
-    
-    return { connection, channel };
-  } catch (error) {
-    console.error('RabbitMQ connection error:', error);
-    process.exit(1);
+  const amqpUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
+  const maxRetries = parseInt(process.env.RABBITMQ_CONNECT_RETRIES || '10', 10);
+  const retryDelayMs = parseInt(process.env.RABBITMQ_CONNECT_RETRY_DELAY_MS || '5000', 10);
+
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    try {
+      connection = await amqp.connect(amqpUrl);
+      channel = await connection.createChannel();
+      console.log('Connected to RabbitMQ successfully');
+      
+      // Assert the queues exist
+      await channel.assertQueue('workshop_registration_queue', { durable: true });
+      await channel.assertQueue('ai_summary_tasks', { durable: true });
+      
+      return { connection, channel };
+    } catch (error) {
+      lastError = error;
+      console.error(`RabbitMQ connection attempt ${attempt}/${maxRetries} failed:`, error);
+
+      if (attempt < maxRetries) {
+        await sleep(retryDelayMs);
+      }
+    }
   }
 }
 

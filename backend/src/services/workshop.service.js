@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { getChannel } = require('../config/rabbitmq');
 
 class WorkshopService {
   /**
@@ -125,6 +126,66 @@ class WorkshopService {
         is_main: wsSpeaker.is_main_speaker
       }))
     };
+  }
+
+  /**
+   * Adds a document to a workshop and triggers AI summary processing
+   * @param {object} data - { workshopId, fileName, storagePath, fileSize, userId }
+   */
+  static async addDocumentAndTriggerSummary(data) {
+    const { workshopId, fileName, storagePath, fileSize, userId } = data;
+    const wsIdBig = BigInt(workshopId);
+    const userIdBig = BigInt(userId);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create WorkshopDocument
+      const doc = await tx.workshopDocument.create({
+        data: {
+          workshop_id: wsIdBig,
+          original_file_name: fileName,
+          storage_path: storagePath,
+          file_size_bytes: fileSize ? BigInt(fileSize) : null,
+          mime_type: 'application/pdf',
+          uploaded_by: userIdBig,
+          upload_status: 'uploaded'
+        }
+      });
+
+      // 2. Create AiSummary record
+      const summary = await tx.aiSummary.create({
+        data: {
+          workshop_id: wsIdBig,
+          document_id: doc.id,
+          status: 'pending',
+          ai_model: 'gemini-1.5-flash'
+        }
+      });
+
+      return { doc, summary };
+    });
+
+    // 3. Trigger RabbitMQ task
+    try {
+      const channel = getChannel();
+      if (channel) {
+        const message = {
+          summary_id: result.summary.id.toString(),
+          file_path: storagePath, // In production, this might be a full URL or S3 path
+          workshop_id: workshopId.toString()
+        };
+        
+        channel.sendToQueue('ai_summary_tasks', Buffer.from(JSON.stringify(message)), {
+          persistent: true
+        });
+        console.log(`[WorkshopService] Published AI summary task for summary ID: ${result.summary.id}`);
+      }
+    } catch (err) {
+      console.warn('[WorkshopService] Failed to publish AI task to RabbitMQ:', err.message);
+      // We don't fail the whole request if RabbitMQ is down, 
+      // but the summary will stay in PENDING status.
+    }
+
+    return result;
   }
 }
 
