@@ -3,7 +3,7 @@
 const AuthController = require('../auth.controller');
 const AuthService = require('../../services/auth.service');
 
-jest.mock('../../services/auth.service');
+jest.mock('../services/auth.service');
 
 describe('AuthController.login', () => {
   let req, res;

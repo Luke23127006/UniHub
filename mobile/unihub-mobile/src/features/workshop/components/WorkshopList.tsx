@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, FlatList, TextInput, Dimensions } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { StyleSheet, View, FlatList, TextInput, Dimensions, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,7 +7,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useRouter } from 'expo-router';
 import { useWorkshop } from '../context/WorkshopContext';
 import { WorkshopCard } from './WorkshopCard';
-import { MOCK_WORKSHOPS } from '../constants/mock-data';
 import { StatusBar } from 'expo-status-bar';
 import { Workshop } from '../types';
 
@@ -16,21 +15,26 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function WorkshopList() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { selectWorkshop } = useWorkshop();
+  const { workshops, totalWorkshops, ongoingCount, isLoading, fetchWorkshops, selectWorkshop } = useWorkshop();
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetchWorkshops();
+  }, [fetchWorkshops]);
 
   const handleSelectWorkshop = (workshop: Workshop) => {
     selectWorkshop(workshop);
-    router.push('/(tabs)/qrcode');
+    router.push(`/qrcode?id=${workshop.id}`);
   };
 
-  const filteredWorkshops = MOCK_WORKSHOPS.filter(w => 
-    w.title.toLowerCase().includes(search.toLowerCase()) ||
-    w.room.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredWorkshops = useMemo(() => {
+    return workshops.filter(w => 
+      w.title.toLowerCase().includes(search.toLowerCase()) ||
+      w.room.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [workshops, search]);
 
-  // Moved Header content directly into useMemo or stable structure to prevent re-mounting
-  const headerComponent = (
+  const headerComponent = useMemo(() => (
     <View style={styles.headerContainer}>
       <ThemedText style={styles.screenTitle}>WORKSHOP LIST</ThemedText>
       <ThemedText style={styles.screenSubtitle}>CHOOSE A SESSION TO START CHECK-IN</ThemedText>
@@ -51,18 +55,18 @@ export default function WorkshopList() {
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
           <ThemedText style={styles.statLabel}>TOTAL</ThemedText>
-          <ThemedText style={styles.statValue}>{MOCK_WORKSHOPS.length}</ThemedText>
+          <ThemedText style={styles.statValue}>{totalWorkshops}</ThemedText>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <ThemedText style={styles.statLabel}>ONGOING</ThemedText>
           <ThemedText style={[styles.statValue, { color: '#22D3EE' }]}>
-            {MOCK_WORKSHOPS.filter(w => new Date(w.start_date) <= new Date() && new Date() <= new Date(w.end_date)).length}
+            {ongoingCount}
           </ThemedText>
         </View>
       </View>
     </View>
-  );
+  ), [totalWorkshops, ongoingCount, search]);
 
   return (
     <ThemedView style={styles.container}>
@@ -82,6 +86,14 @@ export default function WorkshopList() {
             onPress={() => handleSelectWorkshop(item)}
           />
         )}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={fetchWorkshops}
+            tintColor="#22D3EE"
+            colors={["#22D3EE"]}
+          />
+        }
         ListHeaderComponent={headerComponent}
         contentContainerStyle={[
           styles.listContent,

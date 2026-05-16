@@ -3,7 +3,6 @@ import * as Network from 'expo-network';
 import { jwtDecode } from 'jwt-decode';
 import { getDb } from '@/shared/utils/db';
 import { apiClient } from '@/shared/api/api-client';
-import { verifyHS256 } from '@/shared/utils/security';
 
 export interface CheckinResult {
   success: boolean;
@@ -18,45 +17,29 @@ export const useCheckin = () => {
   /**
    * Pre-fetch all valid tickets for a workshop and store in local SQLite.
    */
-  const syncTicketsFromServer = useCallback(async (workshopId: string, workshopTitle?: string) => {
+  const syncTicketsFromServer = useCallback(async (workshopId: string) => {
     setIsSyncing(true);
     try {
       const response = await apiClient.get(`/v1/checkin/workshop/${workshopId}/tickets`);
-      const db = await getDb();
-
       if (response.ok && Array.isArray(response.data)) {
+        const db = await getDb();
+        
         // Use a transaction for bulk insert
         await db.withTransactionAsync(async () => {
-          // Clear old tickets for this workshop
+          // Clear old tickets for this workshop (optional, or just update)
           await db.runAsync('DELETE FROM tickets WHERE wid = ?', [workshopId]);
           
           for (const ticket of response.data) {
             await db.runAsync(
-              'INSERT INTO tickets (tid, wid, uid, student_code, student_name, workshop_title, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-              [ticket.tid, workshopId, ticket.uid, ticket.sid, ticket.name, workshopTitle || 'Unknown Workshop', ticket.checked_in ? 1 : 0]
+              'INSERT INTO tickets (tid, wid, uid, student_code, student_name, status) VALUES (?, ?, ?, ?, ?, ?)',
+              [ticket.tid, workshopId, ticket.uid, ticket.sid, ticket.name, ticket.checked_in ? 1 : 0]
             );
           }
         });
         return { success: true, count: response.data.length };
       }
-      
-      // Fallback if API fails: Check if we already have local tickets
-      const localCount: any = await db.getFirstAsync('SELECT COUNT(*) as cnt FROM tickets WHERE wid = ?', [workshopId]);
-      if (localCount && localCount.cnt > 0) {
-        return { success: true, count: localCount.cnt, isOffline: true };
-      }
-
       return { success: false, error: response.error };
     } catch (error: any) {
-      try {
-        const db = await getDb();
-        const localCount: any = await db.getFirstAsync('SELECT COUNT(*) as cnt FROM tickets WHERE wid = ?', [workshopId]);
-        if (localCount && localCount.cnt > 0) {
-          return { success: true, count: localCount.cnt, isOffline: true };
-        }
-      } catch (localErr) {
-        console.error('[Sync] Local DB fallback failed:', localErr);
-      }
       return { success: false, error: error.message };
     } finally {
       setIsSyncing(false);
@@ -72,19 +55,7 @@ export const useCheckin = () => {
       console.log('Raw Data:', qrData);
       console.log('Current Workshop ID:', currentWorkshopId);
 
-      // 1. Verify JWT Signature (Secure Offline Check)
-      const qrSecret = process.env.EXPO_PUBLIC_QR_SECRET || 'unihub-qr-secret';
-      const isValid = await verifyHS256(qrData, qrSecret);
-      
-      if (!isValid) {
-        console.warn('[Checkin] QR Signature Verification failed!');
-        return { 
-          success: false, 
-          message: 'Mã QR không hợp lệ hoặc đã bị làm giả!' 
-        };
-      }
-
-      // 2. Decode JWT (Basic offline validation)
+      // 1. Decode JWT (Basic offline validation)
       const decoded: any = jwtDecode(qrData);
       console.log('Decoded Payload:', decoded);
 
@@ -102,8 +73,6 @@ export const useCheckin = () => {
       // 2. Check local DB for ticket status
       const ticket: any = await db.getFirstAsync('SELECT * FROM tickets WHERE tid = ?', [tid]);
       
-      console.log(`[Checkin] TID: ${tid} | DB Status: ${ticket?.status} (${typeof ticket?.status})`);
-
       if (!ticket) {
         return { 
           success: false, 
@@ -111,8 +80,7 @@ export const useCheckin = () => {
         };
       }
 
-      if (Number(ticket.status) === 1) {
-        console.log('[Checkin] Duplicate blocked locally.');
+      if (ticket.status === 1) {
         return { success: false, message: 'Vé đã được check-in trước đó', studentName: ticket.student_name };
       }
 
@@ -120,10 +88,7 @@ export const useCheckin = () => {
       const timestamp = new Date().toISOString();
       await db.withTransactionAsync(async () => {
         await db.runAsync('UPDATE tickets SET status = 1, checkin_time = ? WHERE tid = ?', [timestamp, tid]);
-        await db.runAsync(
-          'INSERT OR IGNORE INTO sync_queue (tid, qr_token, client_timestamp) VALUES (?, ?, ?)', 
-          [tid, qrData, timestamp]
-        );
+        await db.runAsync('INSERT OR IGNORE INTO sync_queue (tid, client_timestamp) VALUES (?, ?)', [tid, timestamp]);
       });
 
       return { 
@@ -142,61 +107,34 @@ export const useCheckin = () => {
   }, []);
 
   /**
-   * Uploads check-ins from the local queue to the server.
-   * @param forceAll If true, attempts to sync all records even if marked as synced locally.
+   * Uploads all unsynced check-ins from the local queue to the server.
    */
-  const syncCheckinsToServer = useCallback(async (forceAll: boolean = false) => {
+  const syncCheckinsToServer = useCallback(async () => {
     const networkState = await Network.getNetworkStateAsync();
-    if (!networkState.isConnected) {
-      console.log('[Sync] No network connection, skipping sync.');
-      return;
-    }
+    if (!networkState.isConnected) return;
 
     const db = await getDb();
-    const query = forceAll ? 'SELECT * FROM sync_queue' : 'SELECT * FROM sync_queue WHERE synced = 0';
-    const itemsToSync: any[] = await db.getAllAsync(query);
+    const unsynced: any[] = await db.getAllAsync('SELECT * FROM sync_queue WHERE synced = 0');
     
-    if (itemsToSync.length === 0) {
-      console.log('[Sync] Nothing to sync.');
-      return;
-    }
+    if (unsynced.length === 0) return;
 
-    console.log(`[Sync] Starting sync for ${itemsToSync.length} records (forceAll: ${forceAll})...`);
     setIsSyncing(true);
     try {
       const response = await apiClient.post('/v1/checkin/sync', {
-        checkins: itemsToSync.map(u => ({ 
-          qr_token: u.qr_token, 
-          tid: u.tid, // Keep tid for fallback/logging
-          client_timestamp: u.client_timestamp 
-        })),
-        deviceId: 'mobile-staff-app'
+        checkins: unsynced.map(u => ({ tid: u.tid, client_timestamp: u.client_timestamp })),
+        deviceId: 'mobile-device-placeholder' // In real app use Constants.deviceId or similar
       });
 
-      console.log('[Sync] Response status:', response.ok ? 'OK' : 'FAILED', response.data);
-
-      if (response.ok && response.data) {
-        const { synced = 0, already_synced = 0, synced_ids = [] } = response.data;
-        console.log(`[Sync] Success: ${synced}, Already synced: ${already_synced}`);
-
+      if (response.ok) {
         // Mark as synced in local DB
         await db.withTransactionAsync(async () => {
-          if (Array.isArray(synced_ids) && synced_ids.length > 0) {
-            for (const tid of synced_ids) {
-              await db.runAsync('UPDATE sync_queue SET synced = 1 WHERE tid = ?', [tid]);
-            }
-          } else {
-            for (const item of itemsToSync) {
-              await db.runAsync('UPDATE sync_queue SET synced = 1 WHERE id = ?', [item.id]);
-            }
+          for (const item of unsynced) {
+            await db.runAsync('UPDATE sync_queue SET synced = 1 WHERE id = ?', [item.id]);
           }
         });
-        console.log('[Sync] Successfully marked records as synced in local DB.');
-      } else {
-        console.log('[Sync] Server sync skipped or rejected:', response.error?.message || 'Offline');
       }
     } catch (error) {
-      // Silent error for network failure
+      console.error('Sync Error:', error);
     } finally {
       setIsSyncing(false);
     }

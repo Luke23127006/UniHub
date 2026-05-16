@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Mock Prisma
-jest.mock('../../config/db', () => {
+jest.mock('../config/db', () => {
   const { mockDeep } = require('jest-mock-extended');
   return mockDeep();
 });

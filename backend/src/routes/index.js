@@ -11,6 +11,9 @@ const router = Router();
 
 router.use('/auth', authRoutes);
 router.use(healthRoutes);
-router.use('/workshops', require('./registrationRoutes'));
+router.use('/workshops', workshopRoutes);
+router.use('/registrations', registrationRoutes);
+router.use('/tickets', ticketRoutes);
+router.use('/checkin', checkinRoutes);
 
 module.exports = router;

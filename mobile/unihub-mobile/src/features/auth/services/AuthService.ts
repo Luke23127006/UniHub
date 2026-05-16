@@ -32,17 +32,6 @@ export class AuthService {
   }
 
   /**
-   * Fetches current user profile
-   */
-  static async getMe() {
-    const result = await apiClient.get('/v1/auth/me');
-    if (!result.ok) {
-      throw new Error(result.error?.message || 'Failed to fetch profile');
-    }
-    return result.data;
-  }
-
-  /**
    * Securely saves the access token
    */
   static async saveToken(token: string) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -9,18 +9,27 @@ import { ThemedView } from '@/components/themed-view';
 import { QRBoundingBox } from '@/components/ui/QRBoundingBox';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCheckin } from '../hooks/useCheckin';
+import { initDatabase } from '@/shared/utils/db';
+import { useLocalSearchParams } from 'expo-router';
 
-export default function QRCodeScanner() {
+interface QRCodeScannerProps {
+  title?: string;
+  onBack?: () => void;
+}
+
+export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const { id: workshopId } = useLocalSearchParams();
-  const { performCheckin, syncTicketsFromServer, syncCheckinsToServer } = useCheckin();
+  const { performCheckin, syncTicketsFromServer, syncCheckinsToServer, isSyncing } = useCheckin();
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [bounds, setBounds] = useState<BarcodeScanningResult["bounds"] | null>(
     null,
   );
   const [isScanning, setIsScanning] = useState(true);
-  const [zoom, setZoom] = useState(0); // Standard state for zoom
+  const [zoom, setZoom] = useState(0); 
+  const isProcessing = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize DB and Pre-fetch
@@ -28,25 +37,20 @@ export default function QRCodeScanner() {
     const setup = async () => {
       await initDatabase();
       if (workshopId) {
-        const result = await syncTicketsFromServer(workshopId as string, title);
-        if (!result.success) {
-          const errorMsg = typeof result.error === 'string' 
-            ? result.error 
-            : (result.error?.message || 'Lỗi không xác định');
-          Alert.alert('LỖI ĐỒNG BỘ', `Không thể tải danh sách vé: ${errorMsg}`);
-        }
+        await syncTicketsFromServer(workshopId as string);
         await syncCheckinsToServer();
       }
     };
     setup();
-  }, [workshopId, syncCheckinsToServer, syncTicketsFromServer]);
+  }, [workshopId]);
 
-  const pinchGesture = Gesture.Pinch().onUpdate((event) => {
-    // Sensitivity: change scale to zoom range
-    const newZoom = zoom + (event.scale - 1) * 0.05;
-    const clampedZoom = Math.max(0, Math.min(newZoom, 1));
-    runOnJS(setZoom)(clampedZoom);
-  });
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      // Sensitivity: change scale to zoom range
+      const newZoom = zoom + (event.scale - 1) * 0.05;
+      const clampedZoom = Math.max(0, Math.min(newZoom, 1));
+      runOnJS(setZoom)(clampedZoom);
+    });
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
     if (isProcessing.current || !isScanning) return;
@@ -101,7 +105,6 @@ export default function QRCodeScanner() {
     if (!permission?.granted) {
       requestPermission();
     }
-    const currentTimeout = timeoutRef.current;
     return () => {
       if (currentTimeout) clearTimeout(currentTimeout);
     };
@@ -164,7 +167,7 @@ export default function QRCodeScanner() {
 
           {/* Overlay UI */}
           <View 
-            style={[styles.overlay, { paddingTop: insets.top + 60 }]} 
+            style={[styles.overlay, { top: insets.top + 100 }]} 
             pointerEvents="none"
           >
             <ThemedText type="subtitle" style={styles.hint}>
@@ -248,6 +251,29 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  headerText: { flex: 1 },
+  subTitle: { fontSize: 9, fontWeight: '800', color: '#007AFF', letterSpacing: 1.5 },
+  title: { fontSize: 16, fontWeight: '900', color: '#FFF', marginTop: 2 },
+  rescanButton: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,

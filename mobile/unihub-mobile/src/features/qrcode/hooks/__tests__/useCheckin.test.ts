@@ -56,8 +56,7 @@ describe('useCheckin', () => {
       });
 
       expect(checkinResult?.success).toBe(false);
-      expect(checkinResult?.message).toContain('Sai Workshop!');
-      expect(checkinResult?.message).toContain('wrong-workshop');
+      expect(checkinResult?.message).toContain('không thuộc Workshop');
     });
 
     it('returns error when ticket is already checked in', async () => {
@@ -80,7 +79,7 @@ describe('useCheckin', () => {
   describe('syncCheckinsToServer', () => {
     it('calls API and marks as synced when items exist in queue', async () => {
       mockDb.getAllAsync.mockResolvedValue([{ id: 1, tid: 't1', client_timestamp: '...' }]);
-      (apiClient.post as jest.Mock).mockResolvedValue({ ok: true, data: { synced: 1, synced_ids: ['t1'] } });
+      (apiClient.post as jest.Mock).mockResolvedValue({ ok: true });
 
       const { result } = renderHook(() => useCheckin());
       
@@ -89,7 +88,7 @@ describe('useCheckin', () => {
       });
 
       expect(apiClient.post).toHaveBeenCalledWith('/v1/checkin/sync', expect.anything());
-      expect(mockDb.runAsync).toHaveBeenCalledWith(expect.stringContaining('UPDATE sync_queue SET synced = 1'), ['t1']);
+      expect(mockDb.runAsync).toHaveBeenCalledWith(expect.stringContaining('UPDATE sync_queue SET synced = 1'), [1]);
     });
   });
 });

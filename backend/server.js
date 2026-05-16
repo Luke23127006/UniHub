@@ -1,4 +1,10 @@
 require('dotenv/config');
+
+// Global BigInt serialization fix for Prisma
+BigInt.prototype.toJSON = function() {
+  return this.toString();
+};
+
 const express = require('express');
 const cors = require('cors');
 const prisma = require('./src/config/db');
@@ -13,9 +19,22 @@ app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`[Server] ${req.method} ${req.url}`);
+  next();
+});
+
+// app.use(globalLimiter); // Temporarily disabled for debugging
+
 app.use('/api/v1', routes);
 
 let server;
+let rabbitRetryTimeout;
+let isShuttingDown = false;
+
+async function initBackgroundServices() {
+  if (isShuttingDown) return;
 
 async function bootstrap() {
   try {
@@ -37,6 +56,17 @@ async function bootstrap() {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
+}
+
+function bootstrap() {
+  server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port http://0.0.0.0:${PORT}`);
+  });
+
+  server.keepAliveTimeout = 61000;
+  server.headersTimeout = 65000;
+
+  initBackgroundServices();
 }
 
 bootstrap();

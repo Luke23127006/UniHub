@@ -50,7 +50,7 @@ function StatCard({ label, value, accent }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function WorkshopDashboard({ workshops = [] }) {
+export default function WorkshopDashboard({ workshops = [], meta = {} }) {
   const { viewMode, setViewMode } = useViewMode('card');
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -68,14 +68,13 @@ export default function WorkshopDashboard({ workshops = [] }) {
   const [typeFilter, setTypeFilter] = useState('all');
 
   const stats = useMemo(() => {
-    const published = workshops.filter((w) => w.status === 'published');
     return {
-      total: workshops.length,
-      published: published.length,
-      totalSeats: published.reduce((acc, w) => acc + w.available_seats, 0),
+      total: meta.total ?? workshops.length,
+      ongoing: meta.ongoingCount ?? workshops.filter(w => w.status === 'published').length,
+      totalSeats: workshops.filter(w => w.status === 'published').reduce((acc, w) => acc + w.available_seats, 0),
       paid: workshops.filter((w) => w.is_paid).length,
     };
-  }, [workshops]);
+  }, [workshops, meta]);
 
   const filtered = useMemo(() => {
     return workshops.filter((w) => {
@@ -84,8 +83,6 @@ export default function WorkshopDashboard({ workshops = [] }) {
         w.title.toLowerCase().includes(search.toLowerCase()) ||
         w.speakers.some((s) => (s.full_name || '').toLowerCase().includes(search.toLowerCase()));
 
-      const matchesStatus = statusFilter === 'all' || w.status === statusFilter;
-
       const matchesType =
         typeFilter === 'all' ||
         (typeFilter === 'free' && !w.is_paid) ||
@@ -93,7 +90,7 @@ export default function WorkshopDashboard({ workshops = [] }) {
 
       return matchesSearch && matchesType;
     });
-  }, [search, statusFilter, typeFilter, workshops]);
+  }, [search, typeFilter, workshops]);
 
   const ActiveView = VIEW_COMPONENTS[viewMode];
 
