@@ -57,13 +57,15 @@ class CheckinService {
       total: checkins.length,
       synced: 0,
       failed: 0,
-      already_synced: 0
+      already_synced: 0,
+      synced_ids: []
     };
 
     // We process each checkin in a transaction to ensure atomicity for each record
     // but continue if one fails (e.g. invalid ticket ID)
     for (const item of checkins) {
       try {
+        console.log(`[Sync] Processing ticket ID: ${item.tid}`);
         const ticketIdBig = BigInt(item.tid);
         
         // Find registration and its QR code
@@ -73,31 +75,50 @@ class CheckinService {
         });
 
         if (!registration) {
+          console.warn(`[Sync] Registration not found for ticket ID: ${item.tid}`);
+          results.failed++;
+          continue;
+        }
+
+        if (registration.status !== 'confirmed') {
+          console.warn(`[Sync] Ticket ${item.tid} status is ${registration.status}, not confirmed.`);
           results.failed++;
           continue;
         }
 
         // Create checkin record
-        // Note: registration_id is @unique in Checkin model, so this will fail if already checked in
+        // Use nested connects for relations to satisfy Prisma validation
+        const checkinData = {
+          registration: { connect: { id: ticketIdBig } },
+          scanned_by: { connect: { id: staffIdBig } },
+          is_offline: true,
+          device_id: deviceId,
+          client_timestamp: item.client_timestamp ? new Date(item.client_timestamp) : null,
+          synced_at: new Date()
+        };
+
+        // ONLY add qr_code if it exists in the database
+        // This prevents "Argument qr_code is missing" if the client expects it
+        // and registration.qr_code is null.
+        if (registration.qr_code && registration.qr_code.id) {
+          checkinData.qr_code = { connect: { id: registration.qr_code.id } };
+        }
+
         await prisma.checkin.create({
-          data: {
-            registration_id: ticketIdBig,
-            scanned_by_user_id: staffIdBig,
-            qr_code_id: registration.qr_code ? registration.qr_code.id : 0, // Placeholder if no QR record
-            is_offline: true,
-            device_id: deviceId,
-            client_timestamp: item.client_timestamp ? new Date(item.client_timestamp) : null,
-            synced_at: new Date()
-          }
+          data: checkinData
         });
 
+        console.log(`[Sync] Successfully synced ticket ID: ${item.tid}`);
         results.synced++;
+        results.synced_ids.push(item.tid);
       } catch (err) {
-        // P2002 is Prisma unique constraint violation (already checked in)
-        if (err.code === 'P2002') {
+        // P2002/P2014 are Prisma unique/relation constraint violations (already checked in)
+        if (err.code === 'P2002' || err.code === 'P2014') {
+          console.log(`[Sync] Ticket ${item.tid} was already synced (Duplicate).`);
           results.already_synced++;
+          results.synced_ids.push(item.tid);
         } else {
-          console.error(`[CheckinService] Failed to sync ticket ${item.tid}:`, err.message);
+          console.error(`[Sync] CRITICAL FAILURE for ticket ${item.tid}:`, err);
           results.failed++;
         }
       }
@@ -118,6 +139,61 @@ class CheckinService {
     });
 
     return results;
+  }
+
+  /**
+   * Fetches check-in history with pagination and search.
+   * 
+   * @param {Object} params { page, limit, search }
+   * @returns {Promise<Object>} Paginated history
+   */
+  static async getCheckinHistory({ page = 1, limit = 20, search = '' }) {
+    const skip = (page - 1) * limit;
+
+    const where = {};
+    if (search) {
+      where.OR = [
+        { registration: { student: { student_code: { contains: search, mode: 'insensitive' } } } },
+        { registration: { student: { full_name: { contains: search, mode: 'insensitive' } } } },
+        { registration: { workshop: { title: { contains: search, mode: 'insensitive' } } } }
+      ];
+    }
+
+    const [total, checkins] = await Promise.all([
+      prisma.checkin.count({ where }),
+      prisma.checkin.findMany({
+        where,
+        include: {
+          registration: {
+            include: {
+              student: { select: { full_name: true, student_code: true } },
+              workshop: { select: { title: true } }
+            }
+          },
+          scanned_by: { select: { full_name: true } }
+        },
+        orderBy: { server_timestamp: 'desc' },
+        skip,
+        take: limit
+      })
+    ]);
+
+    return {
+      total,
+      page,
+      limit,
+      hasMore: skip + checkins.length < total,
+      data: checkins.map(c => ({
+        id: c.id.toString(),
+        ticketId: c.registration_id.toString(), // Add this to match with local tid
+        studentName: c.registration.student.full_name,
+        studentCode: c.registration.student.student_code,
+        workshopTitle: c.registration.workshop.title,
+        checkInTime: c.server_timestamp,
+        isOffline: c.is_offline,
+        staffName: c.scanned_by.full_name
+      }))
+    };
   }
 }
 

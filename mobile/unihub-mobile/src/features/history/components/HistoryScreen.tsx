@@ -13,15 +13,19 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StatusBar } from 'expo-status-bar';
+import * as Network from 'expo-network';
 import { HistoryCard } from './HistoryCard';
 import { HistoryService } from '../services/HistoryService';
 import { CheckInHistory } from '../types';
+import { useCheckin } from '@/features/qrcode/hooks/useCheckin';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PAGE_SIZE = 15;
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
+  const { syncCheckinsToServer, isSyncing: isSyncingStore } = useCheckin();
+  
   const [data, setData] = useState<CheckInHistory[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'synced' | 'pending'>('all');
@@ -31,50 +35,93 @@ export default function HistoryScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState({ all: 0, synced: 0, pending: 0 });
+  const [isConnected, setIsConnected] = useState(true);
 
-  // Use a ref to track the latest filter/search to avoid unnecessary re-fetches
   const fetchId = useRef(0);
 
   const loadData = useCallback(async (pageNum: number, isInitial: boolean = false) => {
-    const currentFetchId = ++fetchId.current;
+    if (pageNum > 1 && !hasMore) return;
     
+    const currentFetchId = ++fetchId.current;
     if (isInitial) setLoading(true);
     else setLoadingMore(true);
 
     try {
-      const result = await HistoryService.fetchHistory(pageNum, PAGE_SIZE, filter, search);
-      
-      // Ensure we only update if this is still the latest request
+      const result = await HistoryService.getHistory(pageNum, PAGE_SIZE, search, filter);
       if (currentFetchId === fetchId.current) {
         if (isInitial) {
           setData(result.data);
+          setPage(1);
         } else {
           setData(prev => [...prev, ...result.data]);
+          setPage(pageNum);
         }
         setHasMore(result.hasMore);
         setTotal(result.total);
+        setCounts(result.counts);
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
+      if (pageNum > 1) setHasMore(false);
     } finally {
       if (currentFetchId === fetchId.current) {
         setLoading(false);
         setLoadingMore(false);
       }
     }
-  }, [filter, search]);
+  }, [search, filter, hasMore]);
 
-  // Initial load or filter/search change
+  // Initial load or search/filter change
   useEffect(() => {
-    setPage(1);
     loadData(1, true);
-  }, [filter, search, loadData]);
+  }, [search, filter, loadData]);
+
+  // Auto-sync and network monitoring
+  useEffect(() => {
+    const checkNetwork = async () => {
+      const state = await Network.getNetworkStateAsync();
+      setIsConnected(!!state.isConnected);
+    };
+
+    checkNetwork();
+
+    const interval = setInterval(async () => {
+      const state = await Network.getNetworkStateAsync();
+      const wasDisconnected = !isConnected;
+      setIsConnected(!!state.isConnected);
+      
+      // Auto-sync when internet restored
+      if (wasDisconnected && state.isConnected) {
+        console.log('[AutoSync] Internet restored, syncing...');
+        await syncCheckinsToServer();
+        loadData(1, true);
+      }
+    }, 5000); // Check every 5s
+
+    return () => clearInterval(interval);
+  }, [isConnected, syncCheckinsToServer, loadData]);
+
+  useEffect(() => {
+    const initialSync = async () => {
+      await syncCheckinsToServer();
+      loadData(1, true);
+    };
+    initialSync();
+  }, []);
+
+  const handleSync = async () => {
+    if (!isConnected) {
+        console.log('Cannot sync while offline');
+        return;
+    }
+    await syncCheckinsToServer(true); // Force re-sync all
+    loadData(1, true);
+  };
 
   const handleLoadMore = () => {
-    if (!loadingMore && hasMore && !loading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadData(nextPage, false);
+    if (!loadingMore && hasMore && !loading && data.length > 0) {
+      loadData(page + 1, false);
     }
   };
 
@@ -90,9 +137,31 @@ export default function HistoryScreen() {
 
   const headerComponent = (
     <View style={styles.headerContainer}>
-      <ThemedText style={styles.screenTitle}>CHECK-IN HISTORY</ThemedText>
-      <ThemedText style={styles.screenSubtitle}>MANAGE AND SYNC ATTENDANCE RECORDS</ThemedText>
+      <View style={styles.titleRow}>
+        <View style={{ flex: 1 }}>
+          <ThemedText style={styles.screenTitle}>CHECK-IN HISTORY</ThemedText>
+          <ThemedText style={styles.screenSubtitle}>MANAGE AND SYNC ATTENDANCE RECORDS</ThemedText>
+        </View>
+        <TouchableOpacity 
+          style={[styles.syncBtn, isSyncingStore && styles.syncBtnDisabled]} 
+          onPress={handleSync}
+          disabled={isSyncingStore}
+        >
+          {isSyncingStore ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#FFF" />
+          )}
+        </TouchableOpacity>
+      </View>
       
+      {!isConnected && (
+        <View style={styles.offlineBadge}>
+          <IconSymbol name="wifi.slash" size={12} color="#F59E0B" />
+          <ThemedText style={styles.offlineText}>OFFLINE MODE • SHOWING LOCAL DATA</ThemedText>
+        </View>
+      )}
+
       <View style={styles.searchWrapper}>
         <IconSymbol name="magnifyingglass" size={20} color="#64748B" />
         <TextInput
@@ -113,7 +182,7 @@ export default function HistoryScreen() {
         >
           <ThemedText style={[styles.statLabel, filter === 'synced' && { color: '#10B981' }]}>SYNCED</ThemedText>
           <ThemedText style={[styles.statValue, { color: '#10B981' }]}>
-            {filter === 'synced' ? total : '...'}
+            {counts.synced}
           </ThemedText>
         </TouchableOpacity>
         
@@ -125,7 +194,7 @@ export default function HistoryScreen() {
         >
           <ThemedText style={[styles.statLabel, filter === 'pending' && { color: '#F59E0B' }]}>PENDING</ThemedText>
           <ThemedText style={[styles.statValue, { color: '#F59E0B' }]}>
-            {filter === 'pending' ? total : '...'}
+            {counts.pending}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -192,8 +261,14 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingHorizontal: 24 },
   headerContainer: { marginBottom: 24 },
-  screenTitle: { fontSize: 26, fontWeight: '900', color: '#FFFFFF', letterSpacing: 3, marginBottom: 8, paddingTop: 10 },
-  screenSubtitle: { fontSize: 9, fontWeight: '800', color: '#64748B', letterSpacing: 1.5, marginBottom: 24 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 10, marginBottom: 8 },
+  screenTitle: { fontSize: 26, fontWeight: '900', color: '#FFFFFF', letterSpacing: 3, marginBottom: 8 },
+  screenSubtitle: { fontSize: 9, fontWeight: '800', color: '#64748B', letterSpacing: 1.5, marginBottom: 12 },
+  syncBtn: { 
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#007AFF', 
+    justifyContent: 'center', alignItems: 'center', shadowColor: '#007AFF', shadowRadius: 10, shadowOpacity: 0.5 
+  },
+  syncBtnDisabled: { backgroundColor: '#1E293B', opacity: 0.6 },
   searchWrapper: {
     flexDirection: 'row', alignItems: 'center', height: 50, backgroundColor: 'rgba(15, 23, 42, 0.6)',
     borderRadius: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', marginBottom: 16,
@@ -217,4 +292,22 @@ const styles = StyleSheet.create({
   loadingText: { color: '#64748B', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   footerLoader: { paddingVertical: 20, alignItems: 'center', gap: 8 },
   loaderText: { color: '#475569', fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  offlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  offlineText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#F59E0B',
+    letterSpacing: 1,
+  },
 });

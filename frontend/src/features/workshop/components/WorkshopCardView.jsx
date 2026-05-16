@@ -16,9 +16,9 @@ function SeatsIndicator({ capacity, available }) {
   const barColor =
     available === 0
       ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]'
-      : pct <= 20
+      : pct >= 90
       ? 'bg-orange-500'
-      : pct <= 50
+      : pct >= 70
       ? 'bg-amber-500'
       : 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]';
 

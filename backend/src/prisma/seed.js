@@ -59,6 +59,35 @@ async function main() {
     console.log('Test student user created: test@unihub.com / password123');
   }
 
+  // 2.1. Create 5 Staff Users
+  let staffRole = await prisma.role.findUnique({ where: { name: 'Staff' } });
+  if (!staffRole) {
+    staffRole = await prisma.role.create({ data: { name: 'Staff' } });
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    const email = `staff${i}@unihub.com`;
+    let staffUser = await prisma.user.findUnique({ where: { email } });
+    if (!staffUser) {
+      staffUser = await prisma.user.create({
+        data: {
+          email,
+          password_hash: defaultHash,
+          full_name: `Staff Member ${i}`,
+          is_active: true,
+        },
+      });
+
+      await prisma.userRole.create({
+        data: {
+          user_id: staffUser.id,
+          role_id: staffRole.id
+        }
+      });
+      console.log(`Staff user created: ${email} / password123`);
+    }
+  }
+
   // 2. Create a mock room
   let room = await prisma.room.findFirst({ where: { room_code: "ROOM-1" } });
   if (!room) {

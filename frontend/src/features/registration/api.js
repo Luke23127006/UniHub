@@ -58,8 +58,23 @@ export const MOCK_TICKETS = [
 ];
 
 export const ticketApi = {
-  list: async () => MOCK_TICKETS,
-  getById: async (id) => MOCK_TICKETS.find(t => t.id === id),
+  async list() {
+    const response = await fetch('/api/v1/tickets/my-tickets', { headers: authHeaders() });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch tickets');
+    }
+    return await response.json();
+  },
+
+  async getById(id) {
+    const response = await fetch(`/api/v1/registrations/${id}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch registration details');
+    }
+    return await response.json();
+  },
   
   async register(workshopId, idempotencyKey) {
     try {
@@ -115,21 +130,19 @@ export const ticketApi = {
   },
 
   async confirmPayment(paymentId, idempotencyKey) {
-    try {
-      const response = await fetch(`/api/v1/payments/${paymentId}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': idempotencyKey,
-        },
-      });
-      
-      if (!response.ok) throw response;
-      return await response.json();
-    } catch (error) {
-      console.warn('Payment API failed, using mock success.', error);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      return { success: true, ticket_id: 'TKT-MOCK-PAID' };
+    const response = await fetch(`/api/v1/payments/${paymentId}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey,
+        ...authHeaders(),
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Payment confirmation failed');
     }
+    return await response.json();
   }
 };
