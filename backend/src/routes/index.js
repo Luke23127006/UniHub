@@ -1,7 +1,8 @@
 const { Router } = require('express');
 const authRoutes = require('./authRoutes');
 const healthRoutes = require('./health.routes');
-const workshopRoutes = require('./workshopRoutes');
+const workshopRoutes = require('./workshop.routes');
+const aiRoutes = require('./ai.routes');
 const registrationRoutes = require('./registrationRoutes');
 const ticketRoutes = require('./ticketRoutes');
 const checkinRoutes = require('./checkinRoutes');
@@ -12,10 +13,10 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use(healthRoutes);
 router.use('/workshops', workshopRoutes);
+router.use('/ai', aiRoutes);
 router.use('/registrations', registrationRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/checkin', checkinRoutes);
 router.use('/payments', paymentRoutes);
-router.patch('/internal/ai-summaries/:id', require('../controllers/aiSummary.controller').updateSummary);
 
 module.exports = router;

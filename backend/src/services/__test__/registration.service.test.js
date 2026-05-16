@@ -42,13 +42,10 @@ jest.mock("./paymentService", () => ({
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 
-const redlock = require("../config/redlock");
-const prisma = require("../config/db");
-const paymentService = require("./paymentService");
-const {
-  RegistrationService,
-  RegistrationOutcome,
-} = require("./registration.service");
+const redlock = require('../../config/redlock');
+const prisma = require('../../config/db');
+const paymentService = require('../paymentService');
+const { RegistrationService, RegistrationOutcome } = require('../registration.service');
 
 // ── Shared fixture values ─────────────────────────────────────────────────────
 

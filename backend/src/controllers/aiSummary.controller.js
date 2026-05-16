@@ -3,7 +3,7 @@ const AiSummaryService = require('../services/aiSummary.service');
 class AiSummaryController {
   /**
    * Internal endpoint for AI Worker to update summary results.
-   * PATCH /api/internal/ai-summaries/:id
+   * PATCH /api/ai/internal/summaries/:id
    */
   static async updateSummary(req, res) {
     try {

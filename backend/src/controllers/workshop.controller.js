@@ -54,6 +54,47 @@ class WorkshopController {
       });
     }
   }
+
+  /**
+   * Manual trigger for AI summary processing (useful for testing)
+   */
+  static async triggerAiSummary(req, res) {
+    try {
+      const { id } = req.params;
+      const { fileName, storagePath } = req.body;
+      const userId = req.user.id; // From verifyToken
+
+      if (!storagePath) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'storagePath is required'
+        });
+      }
+
+      const result = await WorkshopService.addDocumentAndTriggerSummary({
+        workshopId: id,
+        fileName: fileName || 'manual_trigger.pdf',
+        storagePath: storagePath,
+        fileSize: 0,
+        userId: userId
+      });
+
+      res.json({
+        status: 'success',
+        message: 'AI summary task triggered successfully',
+        data: {
+          summaryId: result.summary.id.toString(),
+          status: result.summary.status
+        }
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error triggering AI summary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = WorkshopController;
