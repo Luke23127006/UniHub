@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
+const { RegistrationService } = require('../services/registration.service');
 
 const RESERVED_TTL_MINUTES = 15;
 const CRON_SCHEDULE = '*/5 * * * *'; // Run every 5 minutes for better responsiveness
