@@ -32,8 +32,21 @@ export default function AdminLayout() {
   const { token } = theme.useToken();
 
   const handleLogout = () => {
-    // TODO: clear auth token/store before redirecting
-    navigate('/login');
+    const authStorageKeys = [
+      'auth_token',
+      'token',
+      'access_token',
+      'refresh_token',
+      'user',
+      'auth',
+    ];
+
+    authStorageKeys.forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+
+    navigate('/login', { replace: true });
   };
 
   return (
