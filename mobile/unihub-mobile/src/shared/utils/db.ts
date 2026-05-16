@@ -46,7 +46,7 @@ export const initDatabase = async () => {
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tid TEXT,
+        tid TEXT UNIQUE,
         qr_token TEXT,
         client_timestamp TEXT,
         synced INTEGER DEFAULT 0
