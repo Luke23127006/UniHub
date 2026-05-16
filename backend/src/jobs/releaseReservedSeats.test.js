@@ -82,10 +82,10 @@ describe('releaseReservedSeats background job', () => {
   // ────────────────────────────────────────────────────────────────────────────
 
   describe('startReleaseReservedSeatsJob()', () => {
-    it('registers the job with the correct cron expression (every 10 minutes)', () => {
+    it('registers the job with the correct cron expression (every 5 minutes)', () => {
       startReleaseReservedSeatsJob();
 
-      expect(cron.schedule).toHaveBeenCalledWith('*/10 * * * *', expect.any(Function));
+      expect(cron.schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
     });
   });
 
@@ -98,28 +98,28 @@ describe('releaseReservedSeats background job', () => {
       prisma.registration.findMany.mockResolvedValue([]);
     });
 
-    it('queries the DB for registrations with status "reserved" older than 24 hours', async () => {
+    it('queries the DB for registrations with status "pending_payment" or "reserved" older than 15 minutes', async () => {
       await runJob();
 
       expect(prisma.registration.findMany).toHaveBeenCalledWith({
         where: {
-          status: 'reserved',
+          status: { in: ['pending_payment', 'reserved'] },
           registered_at: { lt: expect.any(Date) },
         },
         select: { id: true, workshop_id: true },
       });
     });
 
-    it('passes a cutoff timestamp that is approximately 24 hours in the past', async () => {
+    it('passes a cutoff timestamp that is approximately 15 minutes in the past', async () => {
       const before = Date.now();
       await runJob();
       const after = Date.now();
 
       const { lt: cutoff } = prisma.registration.findMany.mock.calls[0][0].where.registered_at;
-      const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+      const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
-      expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - TWENTY_FOUR_HOURS_MS);
-      expect(cutoff.getTime()).toBeLessThanOrEqual(after - TWENTY_FOUR_HOURS_MS);
+      expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - FIFTEEN_MINUTES_MS);
+      expect(cutoff.getTime()).toBeLessThanOrEqual(after - FIFTEEN_MINUTES_MS);
     });
 
     it('does not execute any transaction', async () => {
@@ -162,10 +162,14 @@ describe('releaseReservedSeats background job', () => {
 
       for (const reg of staleRegistrations) {
         expect(prisma.registration.updateMany).toHaveBeenCalledWith({
-          where: { id: reg.id, status: 'reserved' },
+          where: { 
+            id: reg.id, 
+            status: { in: ['pending_payment', 'reserved'] } 
+          },
           data: {
             status: 'cancelled',
             cancelled_at: expect.any(Date),
+            cancellation_reason: expect.any(String)
           },
         });
       }
@@ -242,8 +246,12 @@ describe('releaseReservedSeats background job', () => {
       // Only the second registration's updates reach the DB
       expect(prisma.registration.updateMany).toHaveBeenCalledTimes(1); // Only the successful one reached the inner call
       expect(prisma.registration.updateMany).toHaveBeenCalledWith({
-        where: { id: staleRegistrations[1].id, status: 'reserved' },
-        data: { status: 'cancelled', cancelled_at: expect.any(Date) },
+        where: { id: staleRegistrations[1].id, status: { in: ['pending_payment', 'reserved'] } },
+        data: { 
+          status: 'cancelled', 
+          cancelled_at: expect.any(Date),
+          cancellation_reason: expect.any(String)
+        },
       });
 
       expect(prisma.workshop.update).toHaveBeenCalledTimes(1);

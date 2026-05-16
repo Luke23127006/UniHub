@@ -56,7 +56,10 @@ describe('PaymentService', () => {
 
       const result = await verifyPayment(REGISTRATION_ID);
       expect(result).toEqual({ success: true });
-      expect(global.fetch).toHaveBeenCalledWith(`${GATEWAY_URL}/payments/verify/${REGISTRATION_ID}`);
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${GATEWAY_URL}/payments/verify/${REGISTRATION_ID}`,
+        expect.objectContaining({ signal: expect.any(Object) })
+      );
     });
 
     it('returns success: false when gateway denies or fails', async () => {
