@@ -77,7 +77,7 @@ services:
       - postgres
       - redis
       - rabbitmq
-    command: sh -c "npm install && npx prisma db seed && npm run dev"
+    command: sh -c "npm install && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run dev"
     networks:
       - unihub_network
     volumes:
