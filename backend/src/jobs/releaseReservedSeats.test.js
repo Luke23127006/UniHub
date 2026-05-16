@@ -162,10 +162,14 @@ describe('releaseReservedSeats background job', () => {
 
       for (const reg of staleRegistrations) {
         expect(prisma.registration.updateMany).toHaveBeenCalledWith({
-          where: { id: reg.id, status: 'reserved' },
+          where: { 
+            id: reg.id, 
+            status: { in: ['pending_payment', 'reserved'] } 
+          },
           data: {
             status: 'cancelled',
             cancelled_at: expect.any(Date),
+            cancellation_reason: expect.any(String)
           },
         });
       }
@@ -242,8 +246,12 @@ describe('releaseReservedSeats background job', () => {
       // Only the second registration's updates reach the DB
       expect(prisma.registration.updateMany).toHaveBeenCalledTimes(1); // Only the successful one reached the inner call
       expect(prisma.registration.updateMany).toHaveBeenCalledWith({
-        where: { id: staleRegistrations[1].id, status: 'reserved' },
-        data: { status: 'cancelled', cancelled_at: expect.any(Date) },
+        where: { id: staleRegistrations[1].id, status: { in: ['pending_payment', 'reserved'] } },
+        data: { 
+          status: 'cancelled', 
+          cancelled_at: expect.any(Date),
+          cancellation_reason: expect.any(String)
+        },
       });
 
       expect(prisma.workshop.update).toHaveBeenCalledTimes(1);
