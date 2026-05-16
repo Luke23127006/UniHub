@@ -416,7 +416,7 @@ model IdempotencyKey {
 model QrCode {
   id              BigInt    @id @default(autoincrement())
   registration_id BigInt    @unique
-  code            String    @unique @db.VarChar(128)
+  code            String    @unique @db.Text
   qr_image_url    String?   @db.VarChar(500)
   is_valid        Boolean   @default(true)
   expires_at      DateTime?
