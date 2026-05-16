@@ -25,10 +25,15 @@ jest.mock('../config/db', () => {
   return mockDeep();
 });
 
+jest.mock('../config/redlock', () => ({
+  acquire: jest.fn(),
+}));
+
 // ── Imports ───────────────────────────────────────────────────────────────────
 
 const cron = require('node-cron');
 const prisma = require('../config/db');
+const redlock = require('../config/redlock');
 const { startReleaseReservedSeatsJob } = require('./releaseReservedSeats');
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
@@ -46,6 +51,8 @@ describe('releaseReservedSeats background job', () => {
     startReleaseReservedSeatsJob();
     runJob = cron.schedule.mock.calls[0][1];
 
+    redlock.acquire.mockResolvedValue({ release: jest.fn() });
+
     jest.restoreAllMocks();
   });
 
@@ -58,8 +65,12 @@ describe('releaseReservedSeats background job', () => {
     // so tx.registration.update and tx.workshop.update resolve to the same
     // mock functions we can assert on.
     prisma.$transaction.mockImplementation(async (fn) => fn(prisma));
-    prisma.registration.update.mockResolvedValue({});
+    prisma.registration.updateMany.mockResolvedValue({ count: 1 });
     prisma.workshop.update.mockResolvedValue({});
+
+    redlock.acquire.mockResolvedValue({
+      release: jest.fn().mockResolvedValue(undefined),
+    });
   });
 
   afterEach(() => {
@@ -150,8 +161,8 @@ describe('releaseReservedSeats background job', () => {
       await runJob();
 
       for (const reg of staleRegistrations) {
-        expect(prisma.registration.update).toHaveBeenCalledWith({
-          where: { id: reg.id },
+        expect(prisma.registration.updateMany).toHaveBeenCalledWith({
+          where: { id: reg.id, status: 'reserved' },
           data: {
             status: 'cancelled',
             cancelled_at: expect.any(Date),
@@ -229,9 +240,9 @@ describe('releaseReservedSeats background job', () => {
       await runJob();
 
       // Only the second registration's updates reach the DB
-      expect(prisma.registration.update).toHaveBeenCalledTimes(1);
-      expect(prisma.registration.update).toHaveBeenCalledWith({
-        where: { id: staleRegistrations[1].id },
+      expect(prisma.registration.updateMany).toHaveBeenCalledTimes(1); // Only the successful one reached the inner call
+      expect(prisma.registration.updateMany).toHaveBeenCalledWith({
+        where: { id: staleRegistrations[1].id, status: 'reserved' },
         data: { status: 'cancelled', cancelled_at: expect.any(Date) },
       });
 

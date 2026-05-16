@@ -18,7 +18,7 @@
     ],
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "src/jobs/"
+      "src/jobs/csvSyncWorker.test.js"
     ]
   },
   "dependencies": {
