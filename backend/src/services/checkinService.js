@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const jwt = require('jsonwebtoken');
 
 class CheckinService {
   /**
@@ -65,17 +66,34 @@ class CheckinService {
     // but continue if one fails (e.g. invalid ticket ID)
     for (const item of checkins) {
       try {
-        console.log(`[Sync] Processing ticket ID: ${item.tid}`);
-        const ticketIdBig = BigInt(item.tid);
+        let ticketId = item.tid;
+
+        // 1. VERIFY JWT (If provided)
+        if (item.qr_token) {
+          try {
+            const decoded = jwt.verify(item.qr_token, process.env.QR_SECRET || 'unihub-qr-secret');
+            ticketId = decoded.tid;
+            console.log(`[Sync] Verified JWT for ticket ID: ${ticketId}`);
+          } catch (err) {
+            console.error(`[Sync] JWT Verification failed for item:`, err.message);
+            results.failed++;
+            continue;
+          }
+        } else {
+          // Backward compatibility or legacy support (though we should enforce JWT soon)
+          console.warn(`[Sync] No qr_token provided for ticket ${item.tid}. Proceeding with raw ID (Insecure).`);
+        }
+
+        const ticketIdBig = BigInt(ticketId);
         
-        // Find registration and its QR code
+        // 2. Find registration and its QR code
         const registration = await prisma.registration.findUnique({
           where: { id: ticketIdBig },
           include: { qr_code: true }
         });
 
         if (!registration) {
-          console.warn(`[Sync] Registration not found for ticket ID: ${item.tid}`);
+          console.warn(`[Sync] Registration not found for ticket ID: ${ticketId}`);
           results.failed++;
           continue;
         }
