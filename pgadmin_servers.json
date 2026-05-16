@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "UniHub_Local",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "unihub_workshop_db",
+      "Username": "unihub_admin",
+      "SSLMode": "prefer"
+    }
+  }
+}
