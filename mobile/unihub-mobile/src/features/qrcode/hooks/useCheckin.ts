@@ -104,7 +104,10 @@ export const useCheckin = () => {
       const timestamp = new Date().toISOString();
       await db.withTransactionAsync(async () => {
         await db.runAsync('UPDATE tickets SET status = 1, checkin_time = ? WHERE tid = ?', [timestamp, tid]);
-        await db.runAsync('INSERT OR IGNORE INTO sync_queue (tid, client_timestamp) VALUES (?, ?)', [tid, timestamp]);
+        await db.runAsync(
+          'INSERT OR IGNORE INTO sync_queue (tid, qr_token, client_timestamp) VALUES (?, ?, ?)', 
+          [tid, qrData, timestamp]
+        );
       });
 
       return { 
@@ -146,7 +149,11 @@ export const useCheckin = () => {
     setIsSyncing(true);
     try {
       const response = await apiClient.post('/v1/checkin/sync', {
-        checkins: itemsToSync.map(u => ({ tid: u.tid, client_timestamp: u.client_timestamp })),
+        checkins: itemsToSync.map(u => ({ 
+          qr_token: u.qr_token, 
+          tid: u.tid, // Keep tid for fallback/logging
+          client_timestamp: u.client_timestamp 
+        })),
         deviceId: 'mobile-staff-app'
       });
 
