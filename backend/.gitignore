@@ -112,3 +112,6 @@ dist
 # Mac OS
 .DS_Store
 /src/generated/prisma
+
+private_key.pem
+public_key.pem
