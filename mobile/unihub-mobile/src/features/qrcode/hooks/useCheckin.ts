@@ -3,6 +3,7 @@ import * as Network from 'expo-network';
 import { jwtDecode } from 'jwt-decode';
 import { getDb } from '@/shared/utils/db';
 import { apiClient } from '@/shared/api/api-client';
+import { verifyHS256 } from '@/shared/utils/security';
 
 export interface CheckinResult {
   success: boolean;
@@ -71,7 +72,19 @@ export const useCheckin = () => {
       console.log('Raw Data:', qrData);
       console.log('Current Workshop ID:', currentWorkshopId);
 
-      // 1. Decode JWT (Basic offline validation)
+      // 1. Verify JWT Signature (Secure Offline Check)
+      const qrSecret = process.env.EXPO_PUBLIC_QR_SECRET || 'unihub-qr-secret';
+      const isValid = await verifyHS256(qrData, qrSecret);
+      
+      if (!isValid) {
+        console.warn('[Checkin] QR Signature Verification failed!');
+        return { 
+          success: false, 
+          message: 'Mã QR không hợp lệ hoặc đã bị làm giả!' 
+        };
+      }
+
+      // 2. Decode JWT (Basic offline validation)
       const decoded: any = jwtDecode(qrData);
       console.log('Decoded Payload:', decoded);
 
@@ -89,6 +102,8 @@ export const useCheckin = () => {
       // 2. Check local DB for ticket status
       const ticket: any = await db.getFirstAsync('SELECT * FROM tickets WHERE tid = ?', [tid]);
       
+      console.log(`[Checkin] TID: ${tid} | DB Status: ${ticket?.status} (${typeof ticket?.status})`);
+
       if (!ticket) {
         return { 
           success: false, 
@@ -96,7 +111,8 @@ export const useCheckin = () => {
         };
       }
 
-      if (ticket.status === 1) {
+      if (Number(ticket.status) === 1) {
+        console.log('[Checkin] Duplicate blocked locally.');
         return { success: false, message: 'Vé đã được check-in trước đó', studentName: ticket.student_name };
       }
 

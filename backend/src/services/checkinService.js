@@ -2,38 +2,16 @@ const prisma = require('../config/db');
 const jwt = require('jsonwebtoken');
 
 class CheckinService {
-  /**
-   * Fetches all valid (confirmed) tickets for a specific workshop.
-   * Used by staff to pre-fetch data for offline check-in.
-   * 
-   * @param {number|bigint} workshopId 
-   * @returns {Promise<Array>} List of valid tickets
-   */
   static async getValidTickets(workshopId) {
     const workshopIdBig = BigInt(workshopId);
-
     const registrations = await prisma.registration.findMany({
-      where: {
-        workshop_id: workshopIdBig,
-        status: 'confirmed'
-      },
+      where: { workshop_id: workshopIdBig, status: 'confirmed' },
       select: {
         id: true,
-        student: {
-          select: {
-            student_code: true,
-            full_name: true,
-            user_id: true
-          }
-        },
-        checkin: {
-          select: {
-            id: true
-          }
-        }
+        student: { select: { student_code: true, full_name: true, user_id: true } },
+        checkin: { select: { id: true } }
       }
     });
-
     return registrations.map(reg => ({
       tid: reg.id.toString(),
       sid: reg.student.student_code,
@@ -43,131 +21,133 @@ class CheckinService {
     }));
   }
 
-  /**
-   * Processes a batch of check-ins synced from a mobile device.
-   * Implements idempotency using database unique constraints.
-   * 
-   * @param {Array} checkins Array of { tid, client_timestamp }
-   * @param {number|bigint} staffUserId 
-   * @param {string} deviceId 
-   * @returns {Promise<Object>} Summary of sync results
-   */
   static async syncCheckins(checkins, staffUserId, deviceId) {
-    const staffIdBig = BigInt(staffUserId);
-    const results = {
-      total: checkins.length,
-      synced: 0,
-      failed: 0,
-      already_synced: 0,
-      synced_ids: []
-    };
+    const staffId = BigInt(staffUserId);
+    const results = { total: checkins.length, synced: 0, failed: 0, already_synced: 0, synced_ids: [] };
 
-    // We process each checkin in a transaction to ensure atomicity for each record
-    // but continue if one fails (e.g. invalid ticket ID)
     for (const item of checkins) {
       try {
         let ticketId = item.tid;
 
-        // 1. VERIFY JWT (If provided)
+        // 1. Extract Ticket ID from QR Token
         if (item.qr_token) {
           try {
             const decoded = jwt.verify(item.qr_token, process.env.QR_SECRET || 'unihub-qr-secret');
             ticketId = decoded.tid;
-            console.log(`[Sync] Verified JWT for ticket ID: ${ticketId}`);
           } catch (err) {
-            console.error(`[Sync] JWT Verification failed for item:`, err.message);
+            console.error(`[Sync] JWT Verification failed: ${err.message}`);
             results.failed++;
             continue;
           }
-        } else {
-          // Backward compatibility or legacy support (though we should enforce JWT soon)
-          console.warn(`[Sync] No qr_token provided for ticket ${item.tid}. Proceeding with raw ID (Insecure).`);
         }
 
-        const ticketIdBig = BigInt(ticketId);
-        
-        // 2. Find registration and its QR code
+        if (!ticketId) {
+          results.failed++;
+          continue;
+        }
+
+        const registrationId = BigInt(ticketId);
+
+        // 2. Idempotency Check
+        const existing = await prisma.checkin.findUnique({
+          where: { registration_id: registrationId }
+        });
+
+        if (existing) {
+          results.already_synced++;
+          results.synced_ids.push(ticketId.toString());
+          continue;
+        }
+
+        // 3. Find Registration with QR Code
         const registration = await prisma.registration.findUnique({
-          where: { id: ticketIdBig },
-          include: { qr_code: true }
+          where: { id: registrationId },
+          include: { qr_code: true, student: true }
         });
 
         if (!registration) {
-          console.warn(`[Sync] Registration not found for ticket ID: ${ticketId}`);
+          console.warn(`[Sync] Registration ${registrationId} not found.`);
           results.failed++;
           continue;
         }
 
-        if (registration.status !== 'confirmed') {
-          console.warn(`[Sync] Ticket ${item.tid} status is ${registration.status}, not confirmed.`);
-          results.failed++;
-          continue;
+        // 4. Ensure QR Code exists (Self-Healing)
+        let qrCodeId = registration.qr_code?.id;
+        
+        if (!qrCodeId) {
+          console.log(`[Sync] QR Code missing for registration ${registrationId}. Healing...`);
+          try {
+            const userId = registration.student?.user_id?.toString() || 'unknown';
+            const payload = {
+              tid: registration.id.toString(),
+              uid: userId,
+              wid: registration.workshop_id.toString(),
+              iat: Math.floor(Date.now() / 1000)
+            };
+            const secret = process.env.QR_SECRET || process.env.JWT_ACCESS_SECRET || 'unihub-qr-secret';
+            const code = jwt.sign(payload, secret);
+
+            const newQr = await prisma.qrCode.create({
+              data: {
+                registration_id: registrationId,
+                code: code,
+                is_valid: true,
+                generated_at: new Date()
+              }
+            });
+            qrCodeId = newQr.id;
+          } catch (healErr) {
+            console.error(`[Sync] Healing failed: ${healErr.message}`);
+            // If healing fails, we still try to insert (maybe DB allows null now)
+          }
         }
 
-        // Create checkin record
-        // Use nested connects for relations to satisfy Prisma validation
+        // 5. Create Checkin
         const checkinData = {
-          registration: { connect: { id: ticketIdBig } },
-          scanned_by: { connect: { id: staffIdBig } },
+          registration: { connect: { id: registrationId } },
+          scanned_by: { connect: { id: staffId } },
           is_offline: true,
-          device_id: deviceId,
-          client_timestamp: item.client_timestamp ? new Date(item.client_timestamp) : null,
-          synced_at: new Date()
+          device_id: deviceId || 'unknown',
+          client_timestamp: item.client_timestamp ? new Date(item.client_timestamp) : null
         };
 
-        // ONLY add qr_code if it exists in the database
-        // This prevents "Argument qr_code is missing" if the client expects it
-        // and registration.qr_code is null.
-        if (registration.qr_code && registration.qr_code.id) {
-          checkinData.qr_code = { connect: { id: registration.qr_code.id } };
+        if (qrCodeId) {
+          checkinData.qr_code = { connect: { id: qrCodeId } };
         }
 
-        await prisma.checkin.create({
-          data: checkinData
-        });
-
-        console.log(`[Sync] Successfully synced ticket ID: ${item.tid}`);
+        await prisma.checkin.create({ data: checkinData });
+        
         results.synced++;
-        results.synced_ids.push(item.tid);
+        results.synced_ids.push(ticketId.toString());
       } catch (err) {
-        // P2002/P2014 are Prisma unique/relation constraint violations (already checked in)
-        if (err.code === 'P2002' || err.code === 'P2014') {
-          console.log(`[Sync] Ticket ${item.tid} was already synced (Duplicate).`);
-          results.already_synced++;
-          results.synced_ids.push(item.tid);
-        } else {
-          console.error(`[Sync] CRITICAL FAILURE for ticket ${item.tid}:`, err);
-          results.failed++;
-        }
+        console.error(`[Sync] CRITICAL Error for ticket ${item.tid}:`, err.message);
+        results.failed++;
       }
     }
 
-    // Log the batch
-    await prisma.offlineSyncBatch.create({
-      data: {
-        device_id: deviceId || 'unknown',
-        staff_user_id: staffIdBig,
-        batch_data: JSON.stringify(checkins),
-        total_records: results.total,
-        synced_records: results.synced,
-        failed_records: results.failed,
-        sync_status: results.failed === 0 ? 'completed' : 'partial_failed',
-        synced_at: new Date()
-      }
-    });
+    // Batch Audit Log
+    try {
+      await prisma.offlineSyncBatch.create({
+        data: {
+          device_id: deviceId || 'unknown',
+          staff_user_id: staffId,
+          batch_data: JSON.stringify(checkins),
+          total_records: results.total,
+          synced_records: results.synced,
+          failed_records: results.failed,
+          sync_status: results.failed === 0 ? 'completed' : 'partial_failed',
+          synced_at: new Date()
+        }
+      });
+    } catch (e) {
+      console.error('[Sync] Batch log failed:', e.message);
+    }
 
     return results;
   }
 
-  /**
-   * Fetches check-in history with pagination and search.
-   * 
-   * @param {Object} params { page, limit, search }
-   * @returns {Promise<Object>} Paginated history
-   */
   static async getCheckinHistory({ page = 1, limit = 20, search = '' }) {
     const skip = (page - 1) * limit;
-
     const where = {};
     if (search) {
       where.OR = [
@@ -176,7 +156,6 @@ class CheckinService {
         { registration: { workshop: { title: { contains: search, mode: 'insensitive' } } } }
       ];
     }
-
     const [total, checkins] = await Promise.all([
       prisma.checkin.count({ where }),
       prisma.checkin.findMany({
@@ -195,15 +174,12 @@ class CheckinService {
         take: limit
       })
     ]);
-
     return {
-      total,
-      page,
-      limit,
+      total, page, limit,
       hasMore: skip + checkins.length < total,
       data: checkins.map(c => ({
         id: c.id.toString(),
-        ticketId: c.registration_id.toString(), // Add this to match with local tid
+        ticketId: c.registration_id.toString(),
         studentName: c.registration.student.full_name,
         studentCode: c.registration.student.student_code,
         workshopTitle: c.registration.workshop.title,
