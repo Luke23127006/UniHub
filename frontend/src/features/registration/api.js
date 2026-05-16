@@ -1,3 +1,8 @@
+const authHeaders = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
 export const MOCK_TICKETS = [
   {
     id: "TKT-1001",

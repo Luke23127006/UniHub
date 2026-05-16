@@ -27,25 +27,6 @@ export async function action({ params, request }) {
   }
 }
 
-export async function action({ params, request }) {
-  const formData = await request.formData();
-  const idempotencyKey = formData.get("idempotencyKey");
-
-  try {
-    const result = await ticketApi.register(params.id, idempotencyKey);
-
-    if (result.requires_payment) {
-      return redirect(`/checkout/${result.id}`);
-    } else {
-      return redirect(`/payment/success?ticketId=${result.id}`);
-    }
-  } catch (err) {
-    console.error("Registration failed", err);
-    return {
-      error: err.message || "Registration failed. Please try again later.",
-    };
-  }
-}
 
 function formatDateTime(value) {
   if (!value) return "TBA";
