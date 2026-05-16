@@ -15,11 +15,17 @@ export function useAuth() {
     const checkAuth = async () => {
       const token = await AuthService.getToken();
       if (token) {
-        // In a real app, we'd fetch user profile here
-        setLoggedIn(true, globalUser); 
+        try {
+          const userData = await AuthService.getMe();
+          setLoggedIn(true, userData);
+        } catch (error) {
+          console.error('Auto-login failed:', error);
+          await AuthService.logout();
+          setLoggedIn(false, null);
+        }
       } else {
-        setIsLoggedInState(globalIsLoggedIn);
-        setUserState(globalUser);
+        setIsLoggedInState(false);
+        setUserState(null);
       }
     };
     

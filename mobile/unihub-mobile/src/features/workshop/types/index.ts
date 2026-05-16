@@ -11,7 +11,9 @@ export interface Workshop {
   end_date: string;
   status: 'published' | 'completed' | 'cancelled' | 'draft';
   is_paid: boolean;
+  capacity: number;
   available_seats: number;
+  registration_count: number;
   checkin_count: number;
   speakers: Speaker[];
 }

@@ -15,5 +15,6 @@ router.use('/workshops', workshopRoutes);
 router.use('/registrations', registrationRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/checkin', checkinRoutes);
+router.use('/payments', paymentRoutes);
 
 module.exports = router;

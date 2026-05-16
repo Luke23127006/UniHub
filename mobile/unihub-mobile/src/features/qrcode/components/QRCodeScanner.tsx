@@ -37,7 +37,13 @@ export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
     const setup = async () => {
       await initDatabase();
       if (workshopId) {
-        await syncTicketsFromServer(workshopId as string);
+        const result = await syncTicketsFromServer(workshopId as string, title);
+        if (!result.success) {
+          const errorMsg = typeof result.error === 'string' 
+            ? result.error 
+            : (result.error?.message || 'Lỗi không xác định');
+          Alert.alert('LỖI ĐỒNG BỘ', `Không thể tải danh sách vé: ${errorMsg}`);
+        }
         await syncCheckinsToServer();
       }
     };

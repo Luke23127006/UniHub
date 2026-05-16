@@ -65,17 +65,16 @@ async function _releaseReservedSeats() {
   for (const registration of staleRegistrations) {
     try {
       await prisma.$transaction(async (tx) => {
-        // 1. Delete associated records first (dependency-first)
-        await tx.checkin.deleteMany({ where: { registration_id: registration.id } });
-        await tx.qrCode.deleteMany({ where: { registration_id: registration.id } });
-        await tx.payment.deleteMany({ where: { registration_id: registration.id } });
-
-        // 2. Hard-delete the registration
-        const { count } = await tx.registration.deleteMany({
-          where: {
-            id: registration.id,
-            status: { in: ['pending_payment', 'reserved'] },
-          }
+        const { count } = await tx.registration.updateMany({
+          where: { 
+            id: registration.id, 
+            status: { in: ['pending_payment', 'reserved'] } 
+          },
+          data: {
+            status: 'cancelled',
+            cancelled_at: new Date(),
+            cancellation_reason: 'System: Payment timeout (15 minutes)',
+          },
         });
 
         if (count > 0) {

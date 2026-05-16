@@ -67,7 +67,11 @@ describe('CheckinService', () => {
     ];
 
     it('successfully syncs multiple check-ins', async () => {
-      prisma.registration.findUnique.mockResolvedValue({ id: BigInt(1), qr_code: { id: BigInt(100) } });
+      prisma.registration.findUnique.mockResolvedValue({ 
+        id: BigInt(1), 
+        status: 'confirmed',
+        qr_code: { id: BigInt(100) } 
+      });
       prisma.checkin.create.mockResolvedValue({ id: BigInt(1) });
       prisma.offlineSyncBatch.create.mockResolvedValue({ id: BigInt(1) });
 
@@ -79,8 +83,12 @@ describe('CheckinService', () => {
       expect(prisma.offlineSyncBatch.create).toHaveBeenCalled();
     });
 
-    it('handles duplicate check-ins gracefully (idempotency)', async () => {
-      prisma.registration.findUnique.mockResolvedValue({ id: BigInt(1), qr_code: { id: BigInt(100) } });
+    it('handles duplicate check-ins gracefully (idempotency - P2002)', async () => {
+      prisma.registration.findUnique.mockResolvedValue({ 
+        id: BigInt(1), 
+        status: 'confirmed',
+        qr_code: { id: BigInt(100) } 
+      });
       
       // First one succeeds, second one fails with unique constraint error
       prisma.checkin.create
@@ -91,6 +99,21 @@ describe('CheckinService', () => {
 
       expect(result.synced).toBe(1);
       expect(result.already_synced).toBe(1);
+      expect(result.total).toBe(2);
+    });
+
+    it('handles duplicate check-ins gracefully (idempotency - P2014)', async () => {
+      prisma.registration.findUnique.mockResolvedValue({ 
+        id: BigInt(1), 
+        status: 'confirmed',
+        qr_code: { id: BigInt(100) } 
+      });
+      
+      prisma.checkin.create.mockRejectedValue({ code: 'P2014', message: 'Relation violation' });
+
+      const result = await CheckinService.syncCheckins(checkins, STAFF_USER_ID, DEVICE_ID);
+
+      expect(result.already_synced).toBe(2);
       expect(result.total).toBe(2);
     });
 
