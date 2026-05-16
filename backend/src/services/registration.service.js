@@ -112,12 +112,12 @@ class RegistrationService {
             throw err;
           }
 
-          // Delete associated payment if exists before deleting registration
-          await tx.payment.deleteMany({
-            where: { registration_id: existing.id }
-          });
+          // Delete associated records in correct order (dependency-first)
+          await tx.checkin.deleteMany({ where: { registration_id: existing.id } });
+          await tx.qrCode.deleteMany({ where: { registration_id: existing.id } });
+          await tx.payment.deleteMany({ where: { registration_id: existing.id } });
 
-          // Delete stale/cancelled registration to allow a fresh start
+          // Delete stale/cancelled registration
           await tx.registration.delete({
             where: { id: existing.id }
           });

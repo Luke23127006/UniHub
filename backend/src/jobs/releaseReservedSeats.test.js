@@ -65,7 +65,8 @@ describe('releaseReservedSeats background job', () => {
     // so tx.registration.update and tx.workshop.update resolve to the same
     // mock functions we can assert on.
     prisma.$transaction.mockImplementation(async (fn) => fn(prisma));
-    prisma.registration.updateMany.mockResolvedValue({ count: 1 });
+    prisma.registration.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.payment.deleteMany.mockResolvedValue({ count: 1 });
     prisma.workshop.update.mockResolvedValue({});
 
     redlock.acquire.mockResolvedValue({
@@ -157,19 +158,14 @@ describe('releaseReservedSeats background job', () => {
       expect(prisma.$transaction).toHaveBeenCalledTimes(staleRegistrations.length);
     });
 
-    it('updates each registration status to "cancelled" with a cancelled_at timestamp', async () => {
+    it('hard-deletes each registration with status "pending_payment" or "reserved"', async () => {
       await runJob();
 
       for (const reg of staleRegistrations) {
-        expect(prisma.registration.updateMany).toHaveBeenCalledWith({
+        expect(prisma.registration.deleteMany).toHaveBeenCalledWith({
           where: { 
             id: reg.id, 
             status: { in: ['pending_payment', 'reserved'] } 
-          },
-          data: {
-            status: 'cancelled',
-            cancelled_at: expect.any(Date),
-            cancellation_reason: expect.any(String)
           },
         });
       }
@@ -244,14 +240,9 @@ describe('releaseReservedSeats background job', () => {
       await runJob();
 
       // Only the second registration's updates reach the DB
-      expect(prisma.registration.updateMany).toHaveBeenCalledTimes(1); // Only the successful one reached the inner call
-      expect(prisma.registration.updateMany).toHaveBeenCalledWith({
+      expect(prisma.registration.deleteMany).toHaveBeenCalledTimes(1); // Only the successful one reached the inner call
+      expect(prisma.registration.deleteMany).toHaveBeenCalledWith({
         where: { id: staleRegistrations[1].id, status: { in: ['pending_payment', 'reserved'] } },
-        data: { 
-          status: 'cancelled', 
-          cancelled_at: expect.any(Date),
-          cancellation_reason: expect.any(String)
-        },
       });
 
       expect(prisma.workshop.update).toHaveBeenCalledTimes(1);
