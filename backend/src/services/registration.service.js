@@ -102,10 +102,25 @@ class RegistrationService {
         const existing = await tx.registration.findUnique({
           where: { student_id_workshop_id: { student_id: student.id, workshop_id: workshopIdBig } }
         });
+
         if (existing) {
-          const err = new Error('You are already registered for this workshop');
-          err.statusCode = 400;
-          throw err;
+          // If the existing registration is already confirmed, we block re-registration.
+          // If it's cancelled, we allow re-registration by deleting the old record first.
+          if (existing.status === 'confirmed') {
+            const err = new Error('You are already registered and confirmed for this workshop');
+            err.statusCode = 400;
+            throw err;
+          }
+
+          // Delete associated payment if exists before deleting registration
+          await tx.payment.deleteMany({
+            where: { registration_id: existing.id }
+          });
+
+          // Delete stale/cancelled registration to allow a fresh start
+          await tx.registration.delete({
+            where: { id: existing.id }
+          });
         }
 
         await tx.workshop.update({
@@ -235,6 +250,103 @@ class RegistrationService {
     }
 
     return result;
+  }
+
+  /**
+   * [CLEANUP] Removes a stale registration and its associated payment record.
+   * Restores the seat to the workshop.
+   * This is used by the cronjob to release held seats after timeout.
+   *
+   * @param {bigint} registrationId
+   * @param {bigint} workshopId
+   */
+  static async cleanupExpiredRegistration(registrationId, workshopId) {
+    return prisma.$transaction(async (tx) => {
+      // 1. Delete associated payment if exists
+      await tx.payment.deleteMany({
+        where: { registration_id: registrationId }
+      });
+
+      // 2. Delete the registration itself
+      // Use deleteMany with status check for extra safety (atomicity)
+      const { count } = await tx.registration.deleteMany({
+        where: { 
+          id: registrationId,
+          status: { in: ['pending_payment', 'reserved'] }
+        }
+      });
+
+      // 3. If a record was actually deleted, restore the seat
+      if (count > 0) {
+        await tx.workshop.update({
+          where: { id: workshopId },
+          data: { available_seats: { increment: 1 } }
+        });
+        return true;
+      }
+      return false;
+    });
+  }
+
+  /**
+   * [USER ACTION] Cancels a confirmed or pending registration by the user.
+   * Only allowed if the workshop hasn't started yet.
+   *
+   * @param {string|bigint} registrationId
+   * @param {bigint} userId
+   */
+  static async cancelTicket(registrationId, userId) {
+    const regIdBig = BigInt(registrationId);
+
+    return prisma.$transaction(async (tx) => {
+      const registration = await tx.registration.findUnique({
+        where: { id: regIdBig },
+        include: { 
+          workshop: true,
+          student: true
+        }
+      });
+
+      if (!registration) {
+        throw new Error('Registration not found');
+      }
+
+      // Security check: Only the owner can cancel
+      if (registration.student.user_id !== BigInt(userId)) {
+        const err = new Error('Unauthorized to cancel this ticket');
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (registration.status === 'cancelled') {
+        return registration;
+      }
+
+      // Business check: Cannot cancel if workshop already started
+      if (new Date(registration.workshop.start_time) <= new Date()) {
+        const err = new Error('Cannot cancel a ticket for a workshop that has already started');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Update status to cancelled
+      const updated = await tx.registration.update({
+        where: { id: regIdBig },
+        data: {
+          status: 'cancelled',
+          cancelled_at: new Date(),
+          cancellation_reason: 'Cancelled by user'
+        }
+      });
+
+      // Restore seat
+      await tx.workshop.update({
+        where: { id: registration.workshop_id },
+        data: { available_seats: { increment: 1 } }
+      });
+
+      return updated;
+    });
   }
 }
 

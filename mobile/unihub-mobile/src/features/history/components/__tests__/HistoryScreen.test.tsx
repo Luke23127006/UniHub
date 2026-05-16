@@ -12,14 +12,35 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: ({ children }: { children: any }) => children,
 }));
 
+jest.mock('expo-network', () => ({
+  getNetworkStateAsync: jest.fn().mockResolvedValue({ isConnected: true }),
+}));
+
+jest.mock('@/features/qrcode/hooks/useCheckin', () => ({
+  useCheckin: jest.fn(() => ({
+    syncCheckinsToServer: jest.fn(),
+    isSyncing: false,
+  })),
+}));
+
 // Mock IconSymbol
 jest.mock('@/components/ui/icon-symbol', () => ({
   IconSymbol: () => null,
 }));
 
 describe('HistoryScreen Pagination', () => {
+  const mockData = {
+    data: [
+      { id: '1', studentName: 'Nguyen Van A', studentCode: 'S1', workshopTitle: 'WS 1', checkInTime: new Date().toISOString(), isLocalOnly: false },
+    ],
+    hasMore: true,
+    total: 100,
+    counts: { all: 100, synced: 80, pending: 20 }
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(HistoryService, 'getHistory').mockResolvedValue(mockData);
   });
 
   it('renders initial page of data', async () => {
@@ -32,33 +53,26 @@ describe('HistoryScreen Pagination', () => {
     await waitFor(() => {
       expect(getAllByText(/Nguyen Van A/i).length).toBeGreaterThan(0);
     });
-  });
 
-  it('loads more data when reaching the end of the list', async () => {
-    const fetchSpy = jest.spyOn(HistoryService, 'fetchHistory');
-    render(<HistoryScreen />);
-
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
-
-    // Simulate reaching the end of the list
-    // FlatList's onEndReached is triggered by the scroll event in a real device, 
-    // but in tests we can call it if we find the FlatList.
-    // However, Testing Library doesn't easily expose the FlatList props.
-    // A better way is to check if the second page is fetched after some action.
+    expect(getByText('CHECK-IN HISTORY')).toBeTruthy();
+    // Use getAllByText because SYNCED appears in stats and card
+    expect(getAllByText('SYNCED').length).toBeGreaterThan(0);
+    expect(getAllByText('PENDING').length).toBeGreaterThan(0);
   });
 
   it('resets pagination when filter changes', async () => {
-    const fetchSpy = jest.spyOn(HistoryService, 'fetchHistory');
-    const { getByText } = render(<HistoryScreen />);
+    const getHistorySpy = jest.spyOn(HistoryService, 'getHistory');
+    const { getAllByText } = render(<HistoryScreen />);
 
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith(1, 15, 'all', ''));
+    await waitFor(() => expect(getHistorySpy).toHaveBeenCalledWith(1, 15, '', 'all'));
 
-    const pendingBtn = getByText('PENDING');
+    // The first 'PENDING' is the filter button
+    const pendingBtn = getAllByText('PENDING')[0];
     fireEvent.press(pendingBtn);
 
     await waitFor(() => {
       // Should reset to page 1 with 'pending' filter
-      expect(fetchSpy).toHaveBeenCalledWith(1, 15, 'pending', '');
+      expect(getHistorySpy).toHaveBeenCalledWith(1, 15, '', 'pending');
     });
   });
 });
