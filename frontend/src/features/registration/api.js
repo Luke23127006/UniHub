@@ -86,41 +86,41 @@ export const ticketApi = {
   async register(workshopId, idempotencyKey) {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/v1/tickets/register', {
+      const response = await fetch('/api/v1/registrations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idempotencyKey,
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ workshop_id: workshopId }),
+        body: JSON.stringify({ workshopId }),
       });
       
-      if (!response.ok) throw response;
-      return await response.json();
-    } catch (error) {
-      console.warn('Registration API failed, using mock logic.', error);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const isPaid = parseInt(workshopId) % 2 === 0;
-      
-      if (isPaid) {
-        return {
-          id: `TKT-${Math.floor(Math.random() * 10000)}`,
-          status: 'RESERVED',
-          requires_payment: true,
-          payment_id: `PAY-${Math.floor(Math.random() * 10000)}`,
-          amount: 50000,
-          currency: 'VND',
-        };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
       }
-
+      
+      const data = await response.json();
+      
+      // Map new backend outcome to frontend expectations
       return {
-        id: `TKT-${Math.floor(Math.random() * 10000)}`,
-        status: 'CONFIRMED',
-        payment_status: 'FREE',
+        id: data.registrationId,
+        status: data.outcome,
+        requires_payment: data.outcome === 'PAID_PENDING_PAYMENT' || data.outcome === 'PAID_GATEWAY_ERROR',
+        payment_url: data.paymentUrl,
+        registration_id: data.registrationId
       };
+    } catch (error) {
+      console.error('Registration API Error:', error);
+      throw error;
     }
+  },
+
+  async getRegistrationStatus(id) {
+    const response = await fetch(`/api/v1/registrations/${id}`, { headers: authHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch status');
+    return await response.json();
   },
 
   async getPaymentById(paymentId) {

@@ -43,15 +43,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'DASHBOARD',
+          title: 'WORKSHOPS',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="square.grid.2x2.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="qrcode"
-        options={{
-          title: 'SCANNER',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="qrcode.viewfinder" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -59,6 +52,13 @@ export default function TabLayout() {
         options={{
           title: 'HISTORY',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="clock.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'PROFILE',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
         }}
       />
     </Tabs>

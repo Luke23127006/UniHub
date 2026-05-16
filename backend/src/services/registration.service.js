@@ -36,31 +36,32 @@ class RegistrationService {
     try {
       lock = await redlock.acquire([lockKey], LOCK_TTL_MS);
     } catch (err) {
-      if (err?.name === 'ExecutionError') {
-        throw Object.assign(new Error('Workshop is busy, please retry shortly'), { statusCode: 409 });
-      }
-      throw Object.assign(new Error('Service temporarily unavailable'), { statusCode: 503 });
+      const isLockContention = err?.name === 'ExecutionError';
+      const error = new Error(isLockContention 
+        ? 'Workshop registration is busy, please try again' 
+        : 'Service temporarily unavailable');
+      error.statusCode = 503;
+      throw error;
     }
 
     try {
-      // Pre-read payment metadata so we can decide the registration status before
-      // opening the write transaction. The lock prevents seat state from changing
-      // between this read and the transaction below.
       const workshopMeta = await prisma.workshop.findUnique({
         where: { id: workshopIdBig },
         select: { is_paid: true, price: true },
       });
 
       if (!workshopMeta) {
-        throw Object.assign(new Error('Workshop not found'), { statusCode: 404 });
+        const err = new Error('Workshop not found');
+        err.statusCode = 404;
+        throw err;
       }
 
       if (workshopMeta.is_paid && workshopMeta.price == null) {
-        throw Object.assign(new Error('Workshop price is not configured'), { statusCode: 500 });
+        const err = new Error('Workshop price is not configured');
+        err.statusCode = 500;
+        throw err;
       }
 
-      // Decide degradation once, outside the tx, so the tx commits exactly one
-      // correct status without needing a post-write patch.
       const degraded = workshopMeta.is_paid && paymentService.isCircuitOpen();
 
       const registrationStatus = !workshopMeta.is_paid
@@ -70,17 +71,20 @@ class RegistrationService {
           : 'pending_payment';
 
       const registration = await prisma.$transaction(async (tx) => {
-        const workshop = await tx.workshop.findUnique({
-          where: { id: workshopIdBig },
-          select: { id: true, available_seats: true },
-        });
+        // [PHASE 5] DB-level pessimistic lock using raw SQL
+        const workshops = await tx.$queryRaw`SELECT id, available_seats FROM workshops WHERE id = ${workshopIdBig} FOR UPDATE`;
+        const workshop = workshops[0];
 
         if (!workshop) {
-          throw Object.assign(new Error('Workshop not found'), { statusCode: 404 });
+          const err = new Error('Workshop not found');
+          err.statusCode = 404;
+          throw err;
         }
 
         if (workshop.available_seats <= 0) {
-          throw Object.assign(new Error('Workshop is sold out'), { statusCode: 409 });
+          const err = new Error('Workshop is sold out');
+          err.statusCode = 409;
+          throw err;
         }
 
         const student = await tx.student.findUnique({
@@ -89,7 +93,19 @@ class RegistrationService {
         });
 
         if (!student) {
-          throw Object.assign(new Error('Student record not found'), { statusCode: 404 });
+          const err = new Error('Student record not found');
+          err.statusCode = 404;
+          throw err;
+        }
+
+        // Check if already registered
+        const existing = await tx.registration.findUnique({
+          where: { student_id_workshop_id: { student_id: student.id, workshop_id: workshopIdBig } }
+        });
+        if (existing) {
+          const err = new Error('You are already registered for this workshop');
+          err.statusCode = 400;
+          throw err;
         }
 
         await tx.workshop.update({
@@ -100,7 +116,7 @@ class RegistrationService {
         return tx.registration.create({
           data: {
             student_id: student.id,
-            workshop_id: workshop.id,
+            workshop_id: workshopIdBig,
             status: registrationStatus,
           },
         });
@@ -116,7 +132,6 @@ class RegistrationService {
         return { outcome: RegistrationOutcome.PAID_RESERVED_DEGRADED, registrationId };
       }
 
-      // Circuit is CLOSED — attempt to initiate a payment session.
       try {
         const { paymentUrl } = await paymentService.initiatePayment(
           registration.id,
@@ -124,18 +139,74 @@ class RegistrationService {
         );
         return { outcome: RegistrationOutcome.PAID_PENDING_PAYMENT, registrationId, paymentUrl };
       } catch (paymentErr) {
-        // Circuit breaker has already recorded the failure.
-        // Registration stays as pending_payment; client can poll or retry.
         console.error('[RegistrationService] Payment gateway error:', paymentErr.message);
         return { outcome: RegistrationOutcome.PAID_GATEWAY_ERROR, registrationId };
       }
     } finally {
-      try {
-        await lock.release();
-      } catch (releaseErr) {
-        console.error('[RegistrationService] Failed to release workshop lock:', releaseErr.message);
+      if (lock) {
+        await lock.release().catch((err) => {
+          console.error('[RegistrationService] Failed to release lock:', err.message);
+        });
       }
     }
+  }
+
+  /**
+   * Confirms a registration after successful payment.
+   * Typically called by a webhook or after manual verification.
+   *
+   * @param {string|bigint} registrationId
+   * @returns {Promise<Object>} The updated registration
+   */
+  static async confirmRegistration(registrationId) {
+    const regIdBig = BigInt(registrationId);
+
+    return await prisma.$transaction(async (tx) => {
+      const registration = await tx.registration.findUnique({
+        where: { id: regIdBig },
+        include: { workshop: true }
+      });
+
+      if (!registration) {
+        throw new Error('Registration not found');
+      }
+
+      if (registration.status === 'confirmed') {
+        return registration;
+      }
+
+      if (registration.status !== 'pending_payment' && registration.status !== 'reserved') {
+        const err = new Error('Registration is not in a confirmable state');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const updated = await tx.registration.update({
+        where: { id: regIdBig },
+        data: {
+          status: 'confirmed',
+          confirmed_at: new Date(),
+        }
+      });
+
+      // Record successful payment
+      await tx.payment.upsert({
+        where: { registration_id: regIdBig },
+        update: {
+          status: 'completed',
+          completed_at: new Date(),
+        },
+        create: {
+          registration_id: regIdBig,
+          amount: registration.workshop.price || 0,
+          currency: 'VND',
+          status: 'completed',
+          completed_at: new Date(),
+        }
+      });
+
+      return updated;
+    });
   }
 }
 

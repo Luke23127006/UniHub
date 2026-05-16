@@ -1,22 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { QRBoundingBox } from '@/components/ui/QRBoundingBox';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCheckin } from '../hooks/useCheckin';
+import { initDatabase } from '@/shared/utils/db';
+import { useLocalSearchParams } from 'expo-router';
 
-export default function QRCodeScanner() {
+interface QRCodeScannerProps {
+  title?: string;
+  onBack?: () => void;
+}
+
+export default function QRCodeScanner({ title, onBack }: QRCodeScannerProps) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
+  const { id: workshopId } = useLocalSearchParams();
+  const { performCheckin, syncTicketsFromServer, syncCheckinsToServer, isSyncing } = useCheckin();
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [bounds, setBounds] = useState<BarcodeScanningResult['bounds'] | null>(null);
   const [isScanning, setIsScanning] = useState(true);
-  const [zoom, setZoom] = useState(0); // Standard state for zoom
+  const [zoom, setZoom] = useState(0); 
+  const isProcessing = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize DB and Pre-fetch
+  useEffect(() => {
+    const setup = async () => {
+      await initDatabase();
+      if (workshopId) {
+        await syncTicketsFromServer(workshopId as string);
+        await syncCheckinsToServer();
+      }
+    };
+    setup();
+  }, [workshopId]);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -26,18 +50,59 @@ export default function QRCodeScanner() {
       runOnJS(setZoom)(clampedZoom);
     });
 
-  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+  const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
+    if (isProcessing.current || !isScanning) return;
+    
     if (result.data) {
+      isProcessing.current = true;
       setScannedData(result.data);
       setBounds(result.bounds);
-      setIsScanning(false); // Pause scanning until user taps "Scan Again"
+      setIsScanning(false); 
 
-      // Clear any pending auto-hide timer
+      // Perform local check-in
+      const checkinResult = await performCheckin(result.data, (workshopId as string) || '');
+
+      if (checkinResult.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        Alert.alert(
+          'CHECK-IN THÀNH CÔNG',
+          `Sinh viên: ${checkinResult.studentName}\nMSV: ${checkinResult.studentCode}`,
+          [
+            { 
+              text: 'TIẾP TỤC', 
+              onPress: () => {
+                isProcessing.current = false;
+                setIsScanning(true);
+                setScannedData(null);
+                setBounds(null);
+                syncCheckinsToServer(); // Try to sync in background
+              } 
+            }
+          ]
+        );
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+        Alert.alert('LỖI CHECK-IN', checkinResult.message, [
+          { 
+            text: 'THỬ LẠI', 
+            onPress: () => {
+              isProcessing.current = false;
+              setIsScanning(true);
+              setScannedData(null);
+              setBounds(null);
+            } 
+          }
+        ]);
+      }
+
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
   };
 
   useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
@@ -51,14 +116,19 @@ export default function QRCodeScanner() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.permissionContainer}>
-          <IconSymbol name="camera.fill" size={64} color="#8E8E93" />
+          <IconSymbol name="camera.fill" size={64} color="#007AFF" />
           <ThemedText type="title" style={styles.permissionTitle}>Camera Access</ThemedText>
           <ThemedText style={styles.permissionText}>
-            We need your permission to show the camera for scanning QR codes.
+            Cần quyền truy cập Camera để quét mã QR điểm danh.
           </ThemedText>
           <TouchableOpacity style={styles.button} onPress={requestPermission}>
-            <Text style={styles.buttonText}>Grant Permission</Text>
+            <Text style={styles.buttonText}>Cấp quyền</Text>
           </TouchableOpacity>
+          {onBack && (
+            <TouchableOpacity style={{ marginTop: 20 }} onPress={onBack}>
+              <Text style={{ color: '#64748B' }}>Quay lại</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ThemedView>
     );
@@ -78,17 +148,32 @@ export default function QRCodeScanner() {
             zoom={zoom}
           />
 
+          {/* New Top Bar with Back Button and Title */}
+          <View style={[styles.topBar, { paddingTop: insets.top + 10, backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+            {onBack && (
+              <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+                <IconSymbol name="chevron.left" size={24} color="#FFF" />
+              </TouchableOpacity>
+            )}
+            <View style={styles.headerText}>
+              <ThemedText style={styles.subTitle}>CHECK-IN TERMINAL</ThemedText>
+              <ThemedText style={styles.title} numberOfLines={1}>
+                {title || 'QUÉT MÃ SINH VIÊN'}
+              </ThemedText>
+            </View>
+          </View>
+
           {/* Overlay UI */}
           <View 
-            style={[styles.overlay, { paddingTop: insets.top + 60 }]} 
+            style={[styles.overlay, { top: insets.top + 100 }]} 
             pointerEvents="none"
           >
             <ThemedText type="subtitle" style={styles.hint}>
-              Align QR code within the frame
+              CĂN CHỈNH MÃ QR VÀO KHUNG
             </ThemedText>
           </View>
 
-          <QRBoundingBox bounds={bounds} data={scannedData ?? undefined} />
+          <QRBoundingBox bounds={bounds ?? undefined} data={scannedData ?? undefined} />
 
           {/* Zoom Indicator */}
           <View style={[styles.zoomContainer, { bottom: insets.bottom + 140 }]}>
@@ -108,7 +193,7 @@ export default function QRCodeScanner() {
               }}
             >
               <IconSymbol name="qrcode.viewfinder" size={24} color="#FFF" />
-              <Text style={styles.rescanText}>Tap to Scan Again</Text>
+              <Text style={styles.rescanText}>Chạm để quét lại</Text>
             </TouchableOpacity>
           )}
         </ThemedView>
@@ -161,6 +246,26 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  headerText: { flex: 1 },
+  subTitle: { fontSize: 9, fontWeight: '800', color: '#007AFF', letterSpacing: 1.5 },
+  title: { fontSize: 16, fontWeight: '900', color: '#FFF', marginTop: 2 },
   rescanButton: {
     position: 'absolute',
     bottom: 50,

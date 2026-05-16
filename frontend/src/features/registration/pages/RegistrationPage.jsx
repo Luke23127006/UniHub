@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLoaderData, useNavigate, Form, useNavigation, useActionData, redirect } from 'react-router';
+import { Link, useLoaderData, useNavigate, Form, useNavigation, useActionData, redirect, useParams } from 'react-router';
 import { workshopApi } from '@/features/workshop/api';
 import { ticketApi } from '../api';
 import StatusBadge from '@/components/StatusBadge';
@@ -17,13 +17,13 @@ export async function action({ params, request }) {
     const result = await ticketApi.register(params.id, idempotencyKey);
     
     if (result.requires_payment) {
-      return redirect(`/checkout/${result.payment_id}`);
+      return redirect(`/checkout/${result.id}`);
     } else {
-      return redirect(`/my-tickets/${result.id}`);
+      return redirect(`/payment/success?ticketId=${result.id}`);
     }
   } catch (err) {
     console.error('Registration failed', err);
-    return { error: 'Registration failed. Please try again later.' };
+    return { error: err.message || 'Registration failed. Please try again later.' };
   }
 }
 
@@ -46,6 +46,7 @@ function formatPrice(price, currency) {
 
 export default function RegistrationPage() {
   const { workshop } = useLoaderData();
+  const navigate = useNavigate();
   const actionData = useActionData();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
@@ -62,12 +63,16 @@ export default function RegistrationPage() {
       <div className="max-w-4xl w-full relative z-10">
         
         {/* Compact Back Button */}
-        <Link to={`/workshops/${workshop.id}`} className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-cyan-500 transition-colors mb-6 group">
+
+        <button 
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-cyan-500 transition-colors mb-6 group"
+        >
           <svg className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Cancel
-        </Link>
+        </button>
 
         {/* Split Layout Card */}
         <div className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-2xl overflow-hidden relative">

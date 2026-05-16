@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Form, Link, redirect, useNavigation, useActionData } from 'react-router';
+import { authService } from '../services/authService';
 
 const inputClass =
   'w-full rounded-lg border border-unihub-border bg-white px-4 py-3 text-sm text-unihub-text outline-none transition placeholder:text-gray-400 focus:border-unihub-primary focus:ring-4 focus:ring-unihub-primary/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-unihub-gold dark:focus:ring-unihub-gold/10';
@@ -10,22 +11,12 @@ export async function action({ request }) {
   const password = formData.get('password');
 
   try {
-    const response = await fetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      return { error: body.message || 'Invalid credentials. Please try again.' };
-    }
-
-    const { access_token } = await response.json();
-    localStorage.setItem('auth_token', access_token);
-    return redirect('/');
-  } catch {
-    return { error: 'Unable to connect to the server. Please try again later.' };
+    await authService.login(email, password);
+    // Use hard reload to sync AuthContext with localStorage
+    window.location.href = '/';
+    return null;
+  } catch (error) {
+    return { error: error.message || 'Unable to connect to the server.' };
   }
 }
 

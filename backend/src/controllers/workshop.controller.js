@@ -1,33 +1,57 @@
-'use strict';
-
-const WorkshopService = require('../services/workshopService');
+const WorkshopService = require('../services/workshop.service');
 
 class WorkshopController {
-  static async getAllWorkshops(req, res) {
+  static async list(req, res) {
     try {
-      const workshops = await WorkshopService.getAllWorkshops();
-      return res.status(200).json(workshops);
-    } catch (err) {
-      console.error('[WorkshopController] getAllWorkshops error:', err);
-      return res.status(500).json({ message: 'Internal server error' });
+      console.log('[WorkshopController] Fetching workshop list...', req.query);
+      const { limit, offset, status } = req.query;
+      const result = await WorkshopService.listWorkshops({ limit, offset, status });
+      console.log(`[WorkshopController] Successfully fetched ${result.data.length} workshops.`);
+      
+      res.json({
+        status: 'success',
+        data: result
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error listing workshops:', error);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error.message
+        }
+      });
     }
   }
 
-  static async getWorkshopById(req, res) {
-    const id = req.params.id;
-    if (!/^[1-9]\d*$/.test(id)) {
-      return res.status(400).json({ message: 'Invalid workshop ID' });
-    }
-
+  static async getById(req, res) {
     try {
+      const { id } = req.params;
       const workshop = await WorkshopService.getWorkshopById(id);
+      
       if (!workshop) {
-        return res.status(404).json({ message: 'Workshop not found' });
+        return res.status(404).json({
+          status: 'error',
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Workshop not found'
+          }
+        });
       }
-      return res.status(200).json(workshop);
-    } catch (err) {
-      console.error('[WorkshopController] getWorkshopById error:', err);
-      return res.status(500).json({ message: 'Internal server error' });
+
+      res.json({
+        status: 'success',
+        data: workshop
+      });
+    } catch (error) {
+      console.error(`[WorkshopController] Error getting workshop ${req.params.id}:`, error);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error.message
+        }
+      });
     }
   }
 }

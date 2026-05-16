@@ -9,7 +9,8 @@ import {
   Keyboard,
   ActivityIndicator,
   useWindowDimensions,
-  ScrollView
+  ScrollView,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -29,6 +30,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/shared/hooks/use-auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AuthService } from '../services/AuthService';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -67,13 +69,19 @@ export default function LoginScreen() {
     transform: [{ translateY: interpolate(entrance.value, [0, 1], [20, 0]) }]
   }));
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) return;
     setIsLoading(true);
-    setTimeout(() => {
+    
+    try {
+      const data = await AuthService.login(email, password);
+      // Token is already stored inside AuthService.login
+      setLoggedIn(true, data.user);
+    } catch (error: any) {
+      Alert.alert('Đăng nhập thất bại', error.message || 'Email hoặc mật khẩu không đúng');
+    } finally {
       setIsLoading(false);
-      setLoggedIn(true);
-    }, 1500);
+    }
   };
 
   // Static Grid to prevent re-calculation crashes on iOS
