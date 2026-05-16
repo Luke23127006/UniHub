@@ -165,7 +165,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       setupWorkshop({ is_paid: false, available_seats: 0 });
     });
 
-    it('throws a 409 error with message "Workshop is sold out"', async () => {
+    it('throws a 503 error with message "Workshop registration is busy, please try again"', async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
