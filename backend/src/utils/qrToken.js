@@ -9,6 +9,7 @@
  *   app holds only the public key (verifies). A leaked public key is harmless.
  */
 
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const QR_TOKEN_ALGORITHM = 'RS256';
@@ -67,7 +68,7 @@ function generateQrToken(ticketData) {
     expiresIn,
     // jti (JWT ID) provides an extra unique identifier per token,
     // which the mobile app can use to detect replay attacks in its local DB.
-    jwtid: `${ticketId}-${Date.now()}`,
+    jwtid: crypto.randomUUID(),
   });
 }
 

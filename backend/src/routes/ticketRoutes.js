@@ -3,6 +3,7 @@ const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
 const verifyOwner = require('../middlewares/ownerMiddleware');
 const RegistrationController = require('../controllers/registration.controller');
+const TicketController = require('../controllers/ticket.controller');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
 const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
 
@@ -26,7 +27,7 @@ router.get(
   verifyToken,
   requireRoles(['Student']),
   verifyOwner,
-  (req, res) => res.status(501).json({ message: 'getQrCode – not yet implemented' })
+  TicketController.getTicketQr
 );
 
 // GET /v1/tickets/my-tickets
