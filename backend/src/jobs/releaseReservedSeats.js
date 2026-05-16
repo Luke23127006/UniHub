@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
-const { RegistrationService } = require('../services/registration.service');
 
 const RESERVED_TTL_MINUTES = 15;
 const CRON_SCHEDULE = '*/5 * * * *'; // Run every 5 minutes for better responsiveness
@@ -64,12 +63,28 @@ async function _releaseReservedSeats() {
 
   for (const registration of staleRegistrations) {
     try {
-      const success = await RegistrationService.cleanupExpiredRegistration(
-        registration.id,
-        registration.workshop_id
-      );
+      await prisma.$transaction(async (tx) => {
+        const { count } = await tx.registration.updateMany({
+          where: {
+            id: registration.id,
+            status: { in: ['pending_payment', 'reserved'] },
+          },
+          data: {
+            status: 'cancelled',
+            cancelled_at: new Date(),
+            cancellation_reason: 'Reservation expired — payment not completed within 15 minutes.',
+          },
+        });
 
-      if (success) released++;
+        if (count > 0) {
+          await tx.workshop.update({
+            where: { id: registration.workshop_id },
+            data: { available_seats: { increment: 1 } },
+          });
+        }
+      });
+
+      released++;
     } catch (err) {
       failed++;
       console.error(
