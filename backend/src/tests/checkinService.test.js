@@ -61,8 +61,10 @@ describe('CheckinService', () => {
       prisma.checkin.findUnique.mockResolvedValue(null);
       prisma.registration.findUnique.mockResolvedValue({
         id: BigInt(mockTid),
+        workshop_id: BigInt(101),
         status: 'confirmed',
-        qr_code: null // Missing QR
+        qr_code: null, // Missing QR
+        student: { user_id: BigInt(2) }
       });
       prisma.student.findUnique.mockResolvedValue({ user_id: BigInt(2) });
       jwt.sign.mockReturnValue('mock-token');
