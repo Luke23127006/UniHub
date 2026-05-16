@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Unit tests for RegistrationService.
@@ -7,7 +7,7 @@
 
 // Global BigInt serialization fix for Prisma (matches server.js)
 if (!BigInt.prototype.toJSON) {
-  BigInt.prototype.toJSON = function() {
+  BigInt.prototype.toJSON = function () {
     return this.toString();
   };
 }
@@ -26,26 +26,29 @@ if (!BigInt.prototype.toJSON) {
 
 const mockLock = { release: jest.fn() };
 
-jest.mock('../config/redlock', () => ({
+jest.mock("../config/redlock", () => ({
   acquire: jest.fn(),
 }));
 
-jest.mock('../config/db', () => {
-  const { mockDeep } = require('jest-mock-extended');
+jest.mock("../config/db", () => {
+  const { mockDeep } = require("jest-mock-extended");
   return mockDeep();
 });
 
-jest.mock('./paymentService', () => ({
+jest.mock("./paymentService", () => ({
   isCircuitOpen: jest.fn(),
   initiatePayment: jest.fn(),
 }));
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 
-const redlock = require('../config/redlock');
-const prisma = require('../config/db');
-const paymentService = require('./paymentService');
-const { RegistrationService, RegistrationOutcome } = require('./registration.service');
+const redlock = require("../config/redlock");
+const prisma = require("../config/db");
+const paymentService = require("./paymentService");
+const {
+  RegistrationService,
+  RegistrationOutcome,
+} = require("./registration.service");
 
 // ── Shared fixture values ─────────────────────────────────────────────────────
 
@@ -54,7 +57,7 @@ const USER_ID = BigInt(1);
 const STUDENT_ID = BigInt(10);
 const WORKSHOP_DB_ID = BigInt(WORKSHOP_ID);
 const REGISTRATION_ID = BigInt(99);
-const PAYMENT_URL = 'https://mock-gateway.com/pay/99';
+const PAYMENT_URL = "https://mock-gateway.com/pay/99";
 const WORKSHOP_PRICE = 50_000;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,19 +66,20 @@ const WORKSHOP_PRICE = 50_000;
  *    1st call → pre-read outside the transaction (is_paid, price)
  *    2nd call → seat-check inside the transaction (id, available_seats)  */
 function setupWorkshop({ is_paid, price = null, available_seats = 5 }) {
-  prisma.workshop.findUnique
-    .mockResolvedValueOnce({ is_paid, price });
-  
+  prisma.workshop.findUnique.mockResolvedValueOnce({ is_paid, price });
+
   // [PHASE 5] Mock $queryRaw for the seat check (SELECT ... FOR UPDATE)
-  prisma.$queryRaw.mockResolvedValueOnce([{ id: WORKSHOP_DB_ID, available_seats }]);
+  prisma.$queryRaw.mockResolvedValueOnce([
+    { id: WORKSHOP_DB_ID, available_seats },
+  ]);
 }
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
-describe('RegistrationService.registerForWorkshop', () => {
+describe("RegistrationService.registerForWorkshop", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
 
     // Lock: acquired successfully by default
     redlock.acquire.mockResolvedValue(mockLock);
@@ -93,7 +97,9 @@ describe('RegistrationService.registerForWorkshop', () => {
 
     // Circuit: CLOSED by default
     paymentService.isCircuitOpen.mockReturnValue(false);
-    paymentService.initiatePayment.mockResolvedValue({ paymentUrl: PAYMENT_URL });
+    paymentService.initiatePayment.mockResolvedValue({
+      paymentUrl: PAYMENT_URL,
+    });
   });
 
   afterEach(() => {
@@ -104,10 +110,10 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 1. Lock acquisition fails
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when redlock.acquire() throws (lock contention or Redis error)', () => {
+  describe("when redlock.acquire() throws (lock contention or Redis error)", () => {
     beforeEach(() => {
-      const lockErr = new Error('ExecutionError: lock already held');
-      lockErr.name = 'ExecutionError';
+      const lockErr = new Error("ExecutionError: lock already held");
+      lockErr.name = "ExecutionError";
       redlock.acquire.mockRejectedValue(lockErr);
     });
 
@@ -120,7 +126,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('does not attempt to release the lock because it was never acquired', async () => {
+    it("does not attempt to release the lock because it was never acquired", async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toBeDefined();
@@ -133,7 +139,7 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 2. Workshop not found at the pre-read stage (before the transaction)
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the workshop does not exist (pre-read returns null)', () => {
+  describe("when the workshop does not exist (pre-read returns null)", () => {
     beforeEach(() => {
       prisma.workshop.findUnique.mockResolvedValue(null);
     });
@@ -143,11 +149,11 @@ describe('RegistrationService.registerForWorkshop', () => {
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
         statusCode: 404,
-        message: 'Workshop not found',
+        message: "Workshop not found",
       });
     });
 
-    it('still releases the lock via the finally block', async () => {
+    it("still releases the lock via the finally block", async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toBeDefined();
@@ -160,21 +166,21 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 3. Workshop is sold out (available_seats ≤ 0 inside the transaction)
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when available_seats is 0 at the time of the transaction', () => {
+  describe("when available_seats is 0 at the time of the transaction", () => {
     beforeEach(() => {
       setupWorkshop({ is_paid: false, available_seats: 0 });
     });
 
-    it('throws a 503 error with message "Workshop registration is busy, please try again"', async () => {
+    it('throws a 409 error with message "Workshop is sold out"', async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
         statusCode: 409,
-        message: 'Workshop is sold out',
+        message: "Workshop is sold out",
       });
     });
 
-    it('does not decrement seats or create a registration', async () => {
+    it("does not decrement seats or create a registration", async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toBeDefined();
@@ -183,7 +189,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       expect(prisma.registration.create).not.toHaveBeenCalled();
     });
 
-    it('still releases the lock via the finally block', async () => {
+    it("still releases the lock via the finally block", async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toBeDefined();
@@ -196,7 +202,7 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 4. Student record not found inside the transaction
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the student record does not exist inside the transaction', () => {
+  describe("when the student record does not exist inside the transaction", () => {
     beforeEach(() => {
       setupWorkshop({ is_paid: false });
       prisma.student.findUnique.mockResolvedValue(null);
@@ -207,11 +213,11 @@ describe('RegistrationService.registerForWorkshop', () => {
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toMatchObject({
         statusCode: 404,
-        message: 'Student record not found',
+        message: "Student record not found",
       });
     });
 
-    it('still releases the lock via the finally block', async () => {
+    it("still releases the lock via the finally block", async () => {
       await expect(
         RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID),
       ).rejects.toBeDefined();
@@ -224,7 +230,7 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 5. Free workshop — happy path
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the workshop is free (is_paid = false)', () => {
+  describe("when the workshop is free (is_paid = false)", () => {
     beforeEach(() => {
       setupWorkshop({ is_paid: false });
     });
@@ -236,12 +242,12 @@ describe('RegistrationService.registerForWorkshop', () => {
         data: {
           student_id: STUDENT_ID,
           workshop_id: WORKSHOP_DB_ID,
-          status: 'confirmed',
+          status: "confirmed",
         },
       });
     });
 
-    it('decrements available_seats by 1', async () => {
+    it("decrements available_seats by 1", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(prisma.workshop.update).toHaveBeenCalledWith({
@@ -250,14 +256,17 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('does not call paymentService.initiatePayment', async () => {
+    it("does not call paymentService.initiatePayment", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(paymentService.initiatePayment).not.toHaveBeenCalled();
     });
 
-    it('returns the FREE_CONFIRMED outcome with the registration ID', async () => {
-      const result = await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
+    it("returns the FREE_CONFIRMED outcome with the registration ID", async () => {
+      const result = await RegistrationService.registerForWorkshop(
+        WORKSHOP_ID,
+        USER_ID,
+      );
 
       expect(result).toEqual({
         outcome: RegistrationOutcome.FREE_CONFIRMED,
@@ -265,7 +274,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('releases the lock after a successful registration', async () => {
+    it("releases the lock after a successful registration", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(mockLock.release).toHaveBeenCalledTimes(1);
@@ -276,7 +285,7 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 6. Paid workshop — circuit CLOSED (normal payment flow)
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the workshop is paid and the payment circuit is CLOSED', () => {
+  describe("when the workshop is paid and the payment circuit is CLOSED", () => {
     beforeEach(() => {
       paymentService.isCircuitOpen.mockReturnValue(false);
       setupWorkshop({ is_paid: true, price: WORKSHOP_PRICE });
@@ -289,12 +298,12 @@ describe('RegistrationService.registerForWorkshop', () => {
         data: {
           student_id: STUDENT_ID,
           workshop_id: WORKSHOP_DB_ID,
-          status: 'pending_payment',
+          status: "pending_payment",
         },
       });
     });
 
-    it('decrements available_seats by 1', async () => {
+    it("decrements available_seats by 1", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(prisma.workshop.update).toHaveBeenCalledWith({
@@ -303,7 +312,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('calls initiatePayment with the registration ID and the workshop price', async () => {
+    it("calls initiatePayment with the registration ID and the workshop price", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(paymentService.initiatePayment).toHaveBeenCalledWith(
@@ -312,8 +321,11 @@ describe('RegistrationService.registerForWorkshop', () => {
       );
     });
 
-    it('returns the PAID_PENDING_PAYMENT outcome with paymentUrl and registrationId', async () => {
-      const result = await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
+    it("returns the PAID_PENDING_PAYMENT outcome with paymentUrl and registrationId", async () => {
+      const result = await RegistrationService.registerForWorkshop(
+        WORKSHOP_ID,
+        USER_ID,
+      );
 
       expect(result).toEqual({
         outcome: RegistrationOutcome.PAID_PENDING_PAYMENT,
@@ -322,7 +334,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('releases the lock after a successful payment initiation', async () => {
+    it("releases the lock after a successful payment initiation", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(mockLock.release).toHaveBeenCalledTimes(1);
@@ -333,13 +345,13 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 7. Paid workshop — circuit OPEN (graceful degradation)
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the workshop is paid and the payment circuit is OPEN', () => {
+  describe("when the workshop is paid and the payment circuit is OPEN", () => {
     beforeEach(() => {
       paymentService.isCircuitOpen.mockReturnValue(true);
       setupWorkshop({ is_paid: true, price: WORKSHOP_PRICE });
     });
 
-    it('does not call initiatePayment — the gateway is bypassed entirely', async () => {
+    it("does not call initiatePayment — the gateway is bypassed entirely", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(paymentService.initiatePayment).not.toHaveBeenCalled();
@@ -352,13 +364,16 @@ describe('RegistrationService.registerForWorkshop', () => {
         data: {
           student_id: STUDENT_ID,
           workshop_id: WORKSHOP_DB_ID,
-          status: 'reserved',
+          status: "reserved",
         },
       });
     });
 
-    it('returns the PAID_RESERVED_DEGRADED outcome without a paymentUrl', async () => {
-      const result = await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
+    it("returns the PAID_RESERVED_DEGRADED outcome without a paymentUrl", async () => {
+      const result = await RegistrationService.registerForWorkshop(
+        WORKSHOP_ID,
+        USER_ID,
+      );
 
       expect(result).toEqual({
         outcome: RegistrationOutcome.PAID_RESERVED_DEGRADED,
@@ -367,7 +382,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       expect(result.paymentUrl).toBeUndefined();
     });
 
-    it('releases the lock via the finally block (degraded path is not an error)', async () => {
+    it("releases the lock via the finally block (degraded path is not an error)", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(mockLock.release).toHaveBeenCalledTimes(1);
@@ -378,15 +393,20 @@ describe('RegistrationService.registerForWorkshop', () => {
   // 8. Paid workshop — circuit CLOSED but gateway call fails
   // ────────────────────────────────────────────────────────────────────────────
 
-  describe('when the workshop is paid, circuit is CLOSED, but initiatePayment rejects', () => {
+  describe("when the workshop is paid, circuit is CLOSED, but initiatePayment rejects", () => {
     beforeEach(() => {
       paymentService.isCircuitOpen.mockReturnValue(false);
-      paymentService.initiatePayment.mockRejectedValue(new Error('Gateway timeout'));
+      paymentService.initiatePayment.mockRejectedValue(
+        new Error("Gateway timeout"),
+      );
       setupWorkshop({ is_paid: true, price: WORKSHOP_PRICE });
     });
 
-    it('returns the PAID_GATEWAY_ERROR outcome with the registrationId (no throw)', async () => {
-      const result = await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
+    it("returns the PAID_GATEWAY_ERROR outcome with the registrationId (no throw)", async () => {
+      const result = await RegistrationService.registerForWorkshop(
+        WORKSHOP_ID,
+        USER_ID,
+      );
 
       expect(result).toEqual({
         outcome: RegistrationOutcome.PAID_GATEWAY_ERROR,
@@ -394,7 +414,7 @@ describe('RegistrationService.registerForWorkshop', () => {
       });
     });
 
-    it('still releases the lock via the finally block', async () => {
+    it("still releases the lock via the finally block", async () => {
       await RegistrationService.registerForWorkshop(WORKSHOP_ID, USER_ID);
 
       expect(mockLock.release).toHaveBeenCalledTimes(1);
@@ -402,17 +422,17 @@ describe('RegistrationService.registerForWorkshop', () => {
   });
 });
 
-describe('RegistrationService.confirmRegistration', () => {
+describe("RegistrationService.confirmRegistration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.$transaction.mockImplementation(async (fn) => fn(prisma));
   });
 
-  it('updates registration status to confirmed and creates a payment record', async () => {
+  it("updates registration status to confirmed and creates a payment record", async () => {
     prisma.registration.findUnique.mockResolvedValue({
       id: REGISTRATION_ID,
-      status: 'pending_payment',
-      workshop: { price: WORKSHOP_PRICE }
+      status: "pending_payment",
+      workshop: { price: WORKSHOP_PRICE },
     });
 
     prisma.registration.update.mockResolvedValue({
@@ -438,27 +458,28 @@ describe('RegistrationService.confirmRegistration', () => {
     expect(prisma.payment.upsert).toHaveBeenCalledWith({
       where: { registration_id: REGISTRATION_ID },
       update: {
-        status: 'completed',
-        completed_at: expect.any(Date)
+        status: "completed",
+        completed_at: expect.any(Date),
       },
       create: {
         registration_id: REGISTRATION_ID,
         amount: WORKSHOP_PRICE,
-        currency: 'VND',
-        status: 'completed',
-        completed_at: expect.any(Date)
-      }
+        currency: "VND",
+        status: "completed",
+        completed_at: expect.any(Date),
+      },
     });
   });
 
-  it('throws error if registration is not in pending_payment or reserved status', async () => {
+  it("throws error if registration is not in pending_payment or reserved status", async () => {
     prisma.registration.findUnique.mockResolvedValue({
       id: REGISTRATION_ID,
-      status: 'cancelled',
-      workshop: { price: WORKSHOP_PRICE }
+      status: "cancelled",
+      workshop: { price: WORKSHOP_PRICE },
     });
 
-    await expect(RegistrationService.confirmRegistration(REGISTRATION_ID))
-      .rejects.toThrow('Registration is not in a confirmable state');
+    await expect(
+      RegistrationService.confirmRegistration(REGISTRATION_ID),
+    ).rejects.toThrow("Registration is not in a confirmable state");
   });
 });
