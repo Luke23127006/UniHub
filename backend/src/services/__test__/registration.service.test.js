@@ -26,26 +26,29 @@ if (!BigInt.prototype.toJSON) {
 
 const mockLock = { release: jest.fn() };
 
-jest.mock("../config/redlock", () => ({
+jest.mock("../../config/redlock", () => ({
   acquire: jest.fn(),
 }));
 
-jest.mock("../config/db", () => {
+jest.mock("../../config/db", () => {
   const { mockDeep } = require("jest-mock-extended");
   return mockDeep();
 });
 
-jest.mock("./paymentService", () => ({
+jest.mock("../paymentService", () => ({
   isCircuitOpen: jest.fn(),
   initiatePayment: jest.fn(),
 }));
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 
-const redlock = require('../../config/redlock');
-const prisma = require('../../config/db');
-const paymentService = require('../paymentService');
-const { RegistrationService, RegistrationOutcome } = require('../registration.service');
+const redlock = require("../../config/redlock");
+const prisma = require("../../config/db");
+const paymentService = require("../paymentService");
+const {
+  RegistrationService,
+  RegistrationOutcome,
+} = require("../registration.service");
 
 // ── Shared fixture values ─────────────────────────────────────────────────────
 

@@ -14,7 +14,7 @@ router.post(
   '/workshops/:id/summarize',
   verifyToken,
   requireRoles(['Admin']),
-  WorkshopController.triggerAiSummary
+  AiSummaryController.requestSummary
 );
 
 /**
@@ -24,6 +24,15 @@ router.post(
 router.patch(
   '/internal/ai-summaries/:id',
   AiSummaryController.updateSummary
+);
+
+/**
+ * @route   PATCH /api/ai/internal/jobs/:jobId
+ * @desc    Internal callback for AI Worker to update temp PDF jobs
+ */
+router.patch(
+  '/internal/jobs/:jobId',
+  AiSummaryController.updateJobStatus
 );
 
 module.exports = router;

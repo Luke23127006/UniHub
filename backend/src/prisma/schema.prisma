@@ -341,6 +341,8 @@ model AiSummary {
   document_id  BigInt
   raw_text     String?
   summary_text String?
+  suggested_title String?    @db.VarChar(500)
+  speaker_name    String?    @db.VarChar(255)
   ai_model     String?         @db.VarChar(100)
   status       AiSummaryStatus @default(pending)
   retry_count  Int             @default(0) @db.SmallInt

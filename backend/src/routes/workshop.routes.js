@@ -2,12 +2,19 @@ const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
 const WorkshopController = require('../controllers/workshop.controller');
+const upload = require('../config/multer');
 
 const router = Router();
 
 // ── Public ────────────────────────────────────────────────────────────────────
 // GET /v1/workshops        – list open workshops
 router.get('/', WorkshopController.list);
+
+// GET /v1/workshops/rooms – list all active rooms
+router.get('/rooms', verifyToken, WorkshopController.listRooms);
+
+// GET /v1/workshops/speakers – list all speakers
+router.get('/speakers', verifyToken, WorkshopController.listSpeakers);
 
 // GET /v1/workshops/:id    – workshop detail + AI summary
 router.get('/:id', WorkshopController.getById);
@@ -18,7 +25,7 @@ router.post(
   '/',
   verifyToken,
   requireRoles(['Admin']),
-  (req, res) => res.status(501).json({ message: 'createWorkshop – not yet implemented' })
+  WorkshopController.create
 );
 
 // PUT /v1/workshops/:id
@@ -43,6 +50,23 @@ router.get(
   verifyToken,
   requireRoles(['Admin', 'Staff']),
   (req, res) => res.status(501).json({ message: 'workshopStats – not yet implemented' })
+);
+
+// POST /v1/workshops/pdf-upload
+router.post(
+  '/pdf-upload',
+  verifyToken,
+  requireRoles(['Admin']),
+  upload.single('file'),
+  WorkshopController.uploadPdfAsync
+);
+
+// GET /v1/workshops/pdf-upload/:jobId
+router.get(
+  '/pdf-upload/:jobId',
+  verifyToken,
+  requireRoles(['Admin']),
+  WorkshopController.getPdfJobStatus
 );
 
 module.exports = router;
