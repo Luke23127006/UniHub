@@ -1,8 +1,8 @@
 'use strict';
 
-const PaymentController = require('../paymentController');
+const PaymentController = require('../payment.controller');
 const { RegistrationService } = require('../../services/registration.service');
-const paymentService = require('../../services/paymentService');
+const paymentService = require('../../services/payment.service');
 
 // Mock dependencies
 jest.mock('../../services/registration.service', () => ({
@@ -11,7 +11,7 @@ jest.mock('../../services/registration.service', () => ({
   }
 }));
 
-jest.mock('../../services/paymentService', () => ({
+jest.mock('../../services/payment.service', () => ({
   verifyPayment: jest.fn()
 }));
 
@@ -40,9 +40,9 @@ describe('PaymentController.confirmPayment', () => {
 
   it('should return 402 if payment verification fails at gateway', async () => {
     paymentService.verifyPayment.mockResolvedValue({ success: false });
-    
+
     await PaymentController.confirmPayment(req, res);
-    
+
     expect(paymentService.verifyPayment).toHaveBeenCalledWith('123');
     expect(res.status).toHaveBeenCalledWith(402);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({

@@ -1,6 +1,6 @@
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
-const paymentService = require('./paymentService');
+const paymentService = require('./payment.service');
 
 const LOCK_TTL_MS = 30_000;
 
@@ -30,15 +30,15 @@ class RegistrationService {
    */
   static async registerForWorkshop(workshopId, userId) {
     const workshopIdBig = BigInt(workshopId);
-    const lockKey = `lock:workshop:${workshopId}`;
+    const lockKey = `lock:registration:student:${userId}:workshop:${workshopId}`;
 
     let lock;
     try {
       lock = await redlock.acquire([lockKey], LOCK_TTL_MS);
     } catch (err) {
       const isLockContention = err?.name === 'ExecutionError';
-      const error = new Error(isLockContention 
-        ? 'Workshop registration is busy, please try again' 
+      const error = new Error(isLockContention
+        ? 'Workshop registration is busy, please try again'
         : 'Service temporarily unavailable');
       error.statusCode = 503;
       throw error;
@@ -135,6 +135,9 @@ class RegistrationService {
             status: registrationStatus,
           },
         });
+      }, {
+        maxWait: 15000, // Wait up to 15s to get a connection in pool under massive spikes
+        timeout: 20000  // Allow the transaction up to 20s to complete
       });
 
       const registrationId = registration.id.toString();
@@ -270,7 +273,7 @@ class RegistrationService {
       // 2. Delete the registration itself
       // Use deleteMany with status check for extra safety (atomicity)
       const { count } = await tx.registration.deleteMany({
-        where: { 
+        where: {
           id: registrationId,
           status: { in: ['pending_payment', 'reserved'] }
         }
@@ -301,7 +304,7 @@ class RegistrationService {
     return prisma.$transaction(async (tx) => {
       const registration = await tx.registration.findUnique({
         where: { id: regIdBig },
-        include: { 
+        include: {
           workshop: true,
           student: true
         }

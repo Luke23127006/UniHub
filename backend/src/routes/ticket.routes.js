@@ -1,8 +1,7 @@
 const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
-const verifyOwner = require('../middlewares/ownerMiddleware');
-const RegistrationController = require('../controllers/registrationController');
+const RegistrationController = require('../controllers/registration.controller');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
 const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
 

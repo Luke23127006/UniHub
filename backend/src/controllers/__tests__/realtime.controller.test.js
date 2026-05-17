@@ -3,7 +3,7 @@
 // jest.mock calls are hoisted above all require() calls by Jest's babel transform,
 // so the mocks are in place before realtime.controller.js runs its module-level code.
 
-jest.mock('../config/redisPubSub', () => ({
+jest.mock('../../config/redisPubSub', () => ({
   redisSubscriber: {
     subscribe: jest.fn(),
     on: jest.fn(),
@@ -13,13 +13,13 @@ jest.mock('../config/redisPubSub', () => ({
   },
 }));
 
-jest.mock('../config/db', () => ({
+jest.mock('../../config/db', () => ({
   workshop: { findMany: jest.fn() },
 }));
 
-const prisma = require('../config/db');
-const { redisSubscriber } = require('../config/redisPubSub');
-const { streamSeats, getSeatsBatch } = require('./realtime.controller');
+const prisma = require('../../config/db');
+const { redisSubscriber } = require('../../config/redisPubSub');
+const { streamSeats, getSeatsBatch } = require('../realtime.controller');
 
 // The handler is registered once at module load time. Capture it immediately here,
 // before any beforeEach/clearAllMocks wipes the mock's call history.

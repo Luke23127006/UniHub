@@ -1,6 +1,6 @@
 const request = require('supertest');
 const express = require('express');
-const RegistrationController = require('../controllers/registrationController');
+const RegistrationController = require('../controllers/registration.controller');
 const { RegistrationService } = require('../services/registration.service');
 
 // Giả lập RegistrationService để không cần Database thật

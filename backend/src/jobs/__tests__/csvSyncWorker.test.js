@@ -18,7 +18,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const prisma = require("../config/db");
+const prisma = require("../../config/db");
 
 // ── Tiny assertion helper ─────────────────────────────────────────────────────
 
@@ -279,4 +279,12 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+} else {
+  describe("csvSyncWorker standalone integration script", () => {
+    it("skips run under Jest environment", () => {
+      expect(true).toBe(true);
+    });
+  });
+}

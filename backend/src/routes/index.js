@@ -1,12 +1,12 @@
 const { Router } = require('express');
-const authRoutes = require('./authRoutes');
+const authRoutes = require('./auth.routes');
 const healthRoutes = require('./health.routes');
 const workshopRoutes = require('./workshop.routes');
 const aiRoutes = require('./ai.routes');
-const registrationRoutes = require('./registrationRoutes');
-const ticketRoutes = require('./ticketRoutes');
-const checkinRoutes = require('./checkinRoutes');
-const paymentRoutes = require('./paymentRoutes');
+const registrationRoutes = require('./registration.routes');
+const ticketRoutes = require('./ticket.routes');
+const checkinRoutes = require('./checkin.routes');
+const paymentRoutes = require('./payment.routes');
 const analyticsRoutes = require('./analytics.routes');
 
 const router = Router();

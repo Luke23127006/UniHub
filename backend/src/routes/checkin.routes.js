@@ -1,8 +1,8 @@
 const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
-const CheckinService = require('../services/checkinService');
-const TicketService = require('../services/ticketService');
+const CheckinService = require('../services/checkin.service');
+const TicketService = require('../services/ticket.service');
 
 const router = Router();
 
@@ -22,7 +22,7 @@ router.get(
       res.json(tickets);
     } catch (error) {
       console.error(`[CheckinRoutes] Error for workshop ${req.params.id}:`, error.message);
-      res.status(error.statusCode || 500).json({ 
+      res.status(error.statusCode || 500).json({
         status: 'error',
         error: { message: error.message }
       });
@@ -44,7 +44,7 @@ router.post(
       if (!Array.isArray(checkins)) {
         return res.status(400).json({ message: 'checkins must be an array' });
       }
-      
+
       const results = await CheckinService.syncCheckins(checkins, req.user.sub, deviceId);
       res.json(results);
     } catch (error) {
@@ -81,10 +81,10 @@ router.get(
   async (req, res) => {
     try {
       const { page, limit, search } = req.query;
-      const history = await CheckinService.getCheckinHistory({ 
-        page: parseInt(page) || 1, 
-        limit: parseInt(limit) || 20, 
-        search 
+      const history = await CheckinService.getCheckinHistory({
+        page: parseInt(page) || 1,
+        limit: parseInt(limit) || 20,
+        search
       });
       res.json(history);
     } catch (error) {

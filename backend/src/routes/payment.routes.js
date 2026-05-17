@@ -2,7 +2,7 @@ const { Router } = require('express');
 const verifyToken = require('../middlewares/authMiddleware');
 const requireRoles = require('../middlewares/rbacMiddleware');
 const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
-const PaymentController = require('../controllers/paymentController');
+const PaymentController = require('../controllers/payment.controller');
 
 const router = Router();
 

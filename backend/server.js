@@ -5,12 +5,16 @@ BigInt.prototype.toJSON = function() {
   return this.toString();
 };
 
-const express = require('express');
-const cors = require('cors');
-const prisma = require('./src/config/db');
-const routes = require('./src/routes');
-const { connectRabbitMQ, closeRabbitMQ } = require('./src/config/rabbitmq');
-const { startRegistrationWorker } = require('./src/jobs/registrationWorker');
+const express = require("express");
+const cors = require("cors");
+const prisma = require("./src/config/db");
+const routes = require("./src/routes");
+const { connectRabbitMQ, closeRabbitMQ } = require("./src/config/rabbitmq");
+const { startNotificationWorker } = require("./src/workers/notificationWorker");
+const { globalLimiter } = require("./src/middlewares/rateLimiter.middleware");
+const {
+  startReleaseReservedSeatsJob,
+} = require("./src/jobs/releaseReservedSeats");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,7 +29,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// app.use(globalLimiter); // Temporarily disabled for debugging
+app.use(globalLimiter);
 
 app.use('/api/v1', routes);
 
@@ -40,18 +44,9 @@ async function bootstrap() {
   try {
     // Initialize RabbitMQ connection
     await connectRabbitMQ();
-    
-    // Start the worker to consume messages
-    await startRegistrationWorker();
-
-    server = app.listen(PORT, () => {
-      console.log(`Server running on port http://localhost:${PORT}`);
-    });
-   
-    // Config keep alive timeout and headers timeout
-    // This is needed for long polling connections (SSE)
-    server.keepAliveTimeout = 61000;
-    server.headersTimeout = 65000;
+    await startNotificationWorker();
+    startReleaseReservedSeatsJob();
+    console.log("RabbitMQ connected and background workers started.");
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

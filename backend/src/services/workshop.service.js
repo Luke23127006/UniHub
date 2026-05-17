@@ -139,7 +139,7 @@ class WorkshopService {
    */
   static async createWorkshop(data, userId) {
     const { title, speaker, startTime, endTime, roomId, totalSeats, pricing, pdfJobId } = data;
-    
+
     // Find room by room_code to get its ID
     const room = await prisma.room.findUnique({ where: { room_code: roomId } });
     if (!room) {
@@ -172,7 +172,7 @@ class WorkshopService {
             data: { full_name: speaker }
           });
         }
-        
+
         await tx.workshopSpeaker.create({
           data: {
             workshop_id: newWorkshop.id,
@@ -187,33 +187,33 @@ class WorkshopService {
         // We need AiSummaryService to get job status
         const AiSummaryService = require('./aiSummary.service');
         const jobData = await AiSummaryService.getJobStatus(pdfJobId);
-        
-        if (jobData && jobData.status === 'completed') {
-           // We might not have the original file name easily, use a placeholder
-           const doc = await tx.workshopDocument.create({
-             data: {
-               workshop_id: newWorkshop.id,
-               original_file_name: 'uploaded_document.pdf',
-               storage_path: 'local_storage', // in a real app, this would be the actual path
-               mime_type: 'application/pdf',
-               uploaded_by: BigInt(userId),
-               upload_status: 'uploaded'
-             }
-           });
 
-           await tx.aiSummary.create({
-             data: {
-               workshop_id: newWorkshop.id,
-               document_id: doc.id,
-               status: 'completed',
-               ai_model: 'gemini-1.5-flash',
-               raw_text: jobData.raw_text || '',
-               summary_text: jobData.summary_text || '',
-               suggested_title: jobData.suggested_title || '',
-               speaker_name: jobData.speaker_name || '',
-               completed_at: new Date()
-             }
-           });
+        if (jobData && jobData.status === 'completed') {
+          // We might not have the original file name easily, use a placeholder
+          const doc = await tx.workshopDocument.create({
+            data: {
+              workshop_id: newWorkshop.id,
+              original_file_name: 'uploaded_document.pdf',
+              storage_path: 'local_storage', // in a real app, this would be the actual path
+              mime_type: 'application/pdf',
+              uploaded_by: BigInt(userId),
+              upload_status: 'uploaded'
+            }
+          });
+
+          await tx.aiSummary.create({
+            data: {
+              workshop_id: newWorkshop.id,
+              document_id: doc.id,
+              status: 'completed',
+              ai_model: 'gemini-1.5-flash',
+              raw_text: jobData.raw_text || '',
+              summary_text: jobData.summary_text || '',
+              suggested_title: jobData.suggested_title || '',
+              speaker_name: jobData.speaker_name || '',
+              completed_at: new Date()
+            }
+          });
         }
       }
 
@@ -322,7 +322,7 @@ class WorkshopService {
       err.statusCode = 404;
       throw err;
     }
-    
+
     // Find room by room_code to get its ID
     const room = await prisma.room.findUnique({ where: { room_code: roomId } });
     if (!room) {
@@ -366,7 +366,7 @@ class WorkshopService {
             data: { full_name: speaker }
           });
         }
-        
+
         await tx.workshopSpeaker.create({
           data: {
             workshop_id: workshopIdBig,
@@ -380,32 +380,32 @@ class WorkshopService {
       if (pdfJobId) {
         const AiSummaryService = require('./aiSummary.service');
         const jobData = await AiSummaryService.getJobStatus(pdfJobId);
-        
-        if (jobData && jobData.status === 'completed') {
-           const doc = await tx.workshopDocument.create({
-             data: {
-               workshop_id: workshopIdBig,
-               original_file_name: 'uploaded_document.pdf',
-               storage_path: 'local_storage',
-               mime_type: 'application/pdf',
-               uploaded_by: BigInt(userId),
-               upload_status: 'uploaded'
-             }
-           });
 
-           await tx.aiSummary.create({
-             data: {
-               workshop_id: workshopIdBig,
-               document_id: doc.id,
-               status: 'completed',
-               ai_model: 'gemini-1.5-flash',
-               raw_text: jobData.raw_text || '',
-               summary_text: jobData.summary_text || '',
-               suggested_title: jobData.suggested_title || '',
-               speaker_name: jobData.speaker_name || '',
-               completed_at: new Date()
-             }
-           });
+        if (jobData && jobData.status === 'completed') {
+          const doc = await tx.workshopDocument.create({
+            data: {
+              workshop_id: workshopIdBig,
+              original_file_name: 'uploaded_document.pdf',
+              storage_path: 'local_storage',
+              mime_type: 'application/pdf',
+              uploaded_by: BigInt(userId),
+              upload_status: 'uploaded'
+            }
+          });
+
+          await tx.aiSummary.create({
+            data: {
+              workshop_id: workshopIdBig,
+              document_id: doc.id,
+              status: 'completed',
+              ai_model: 'gemini-1.5-flash',
+              raw_text: jobData.raw_text || '',
+              summary_text: jobData.summary_text || '',
+              suggested_title: jobData.suggested_title || '',
+              speaker_name: jobData.speaker_name || '',
+              completed_at: new Date()
+            }
+          });
         }
       }
 
@@ -420,7 +420,7 @@ class WorkshopService {
    */
   static async cancelWorkshop(id) {
     const workshopIdBig = BigInt(id);
-    
+
     // Check if workshop exists
     const existing = await prisma.workshop.findUnique({ where: { id: workshopIdBig } });
     if (!existing) {

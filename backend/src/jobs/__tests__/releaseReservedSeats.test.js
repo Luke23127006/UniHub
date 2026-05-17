@@ -20,21 +20,21 @@ jest.mock('node-cron', () => ({
   schedule: jest.fn(),
 }));
 
-jest.mock('../config/db', () => {
+jest.mock('../../config/db', () => {
   const { mockDeep } = require('jest-mock-extended');
   return mockDeep();
 });
 
-jest.mock('../config/redlock', () => ({
+jest.mock('../../config/redlock', () => ({
   acquire: jest.fn(),
 }));
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 
 const cron = require('node-cron');
-const prisma = require('../config/db');
-const redlock = require('../config/redlock');
-const { startReleaseReservedSeatsJob } = require('./releaseReservedSeats');
+const prisma = require('../../config/db');
+const redlock = require('../../config/redlock');
+const { startReleaseReservedSeatsJob } = require('../releaseReservedSeats');
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ describe('releaseReservedSeats background job', () => {
       prisma.registration.findMany.mockResolvedValue([]);
     });
 
-    it('queries the DB for registrations with status "pending_payment" or "reserved" older than 15 minutes', async () => {
+    it('queries the DB for registrations with status "pending_payment" or "reserved" older than 10 minutes', async () => {
       await runJob();
 
       expect(prisma.registration.findMany).toHaveBeenCalledWith({
@@ -111,16 +111,16 @@ describe('releaseReservedSeats background job', () => {
       });
     });
 
-    it('passes a cutoff timestamp that is approximately 15 minutes in the past', async () => {
+    it('passes a cutoff timestamp that is approximately 10 minutes in the past', async () => {
       const before = Date.now();
       await runJob();
       const after = Date.now();
 
       const { lt: cutoff } = prisma.registration.findMany.mock.calls[0][0].where.registered_at;
-      const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+      const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-      expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - FIFTEEN_MINUTES_MS);
-      expect(cutoff.getTime()).toBeLessThanOrEqual(after - FIFTEEN_MINUTES_MS);
+      expect(cutoff.getTime()).toBeGreaterThanOrEqual(before - TEN_MINUTES_MS);
+      expect(cutoff.getTime()).toBeLessThanOrEqual(after - TEN_MINUTES_MS);
     });
 
     it('does not execute any transaction', async () => {

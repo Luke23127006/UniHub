@@ -12,8 +12,8 @@ const checkIdempotency = async (req, res, next) => {
     return next();
   }
 
-  const userId = req.user?.id ?? 'anon';
-  const scopedKey = `${userId}:${req.method}:${req.originalUrl}:${rawKey}`;
+  const resolvedUserId = req.user?.id ?? req.user?.sub ?? 'anon';
+  const scopedKey = `${resolvedUserId}:${req.method}:${req.originalUrl}:${rawKey}`;
   const keyHash = crypto.createHash('sha256').update(scopedKey).digest('hex');
   const redisKey = `${REDIS_PREFIX}${keyHash}`;
 
@@ -64,12 +64,13 @@ const checkIdempotency = async (req, res, next) => {
         REDIS_TTL_SECONDS,
       );
 
-      if (req.user?.id) {
+      if (req.user?.id || req.user?.sub) {
+        const dbUserId = req.user.id != null ? BigInt(req.user.id) : BigInt(req.user.sub);
         await prisma.idempotencyKey
           .create({
             data: {
               key_hash: keyHash,
-              user_id: req.user.id,
+              user_id: dbUserId,
               resource_type: `${req.baseUrl}${req.path}`,
               response_status: status,
               response_body: bodyStr,
