@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useWorkshopSeats } from '@/hooks/useWorkshopSeats';
 import { useSearchParams } from 'react-router';
 import { useViewMode } from '@/hooks/useViewMode';
 import ViewModeToggle from '@/components/ViewModeToggle';
@@ -54,6 +55,17 @@ export default function WorkshopDashboard({ workshops = [], meta = {} }) {
   const { viewMode, setViewMode } = useViewMode('card');
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
+  const liveSeatMap = useWorkshopSeats();
+
+  // Merge real-time seat counts into the server-loaded workshop list
+  const liveWorkshops = useMemo(
+    () => workshops.map((w) =>
+      w.id in liveSeatMap
+        ? { ...w, available_seats: liveSeatMap[w.id] }
+        : w
+    ),
+    [workshops, liveSeatMap]
+  );
   
   // Sync status filter with URL
   const statusFilter = searchParams.get('status') || 'all';
@@ -69,15 +81,15 @@ export default function WorkshopDashboard({ workshops = [], meta = {} }) {
 
   const stats = useMemo(() => {
     return {
-      total: meta.total ?? workshops.length,
-      ongoing: meta.ongoingCount ?? workshops.filter(w => w.status === 'published').length,
-      totalSeats: workshops.filter(w => w.status === 'published').reduce((acc, w) => acc + w.available_seats, 0),
-      paid: workshops.filter((w) => w.is_paid).length,
+      total: meta.total ?? liveWorkshops.length,
+      ongoing: meta.ongoingCount ?? liveWorkshops.filter(w => w.status === 'published').length,
+      totalSeats: liveWorkshops.filter(w => w.status === 'published').reduce((acc, w) => acc + w.available_seats, 0),
+      paid: liveWorkshops.filter((w) => w.is_paid).length,
     };
-  }, [workshops, meta]);
+  }, [liveWorkshops, meta]);
 
   const filtered = useMemo(() => {
-    return workshops.filter((w) => {
+    return liveWorkshops.filter((w) => {
       const matchesSearch =
         !search ||
         w.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -90,7 +102,7 @@ export default function WorkshopDashboard({ workshops = [], meta = {} }) {
 
       return matchesSearch && matchesType;
     });
-  }, [search, typeFilter, workshops]);
+  }, [search, typeFilter, liveWorkshops]);
 
   const ActiveView = VIEW_COMPONENTS[viewMode];
 
@@ -185,7 +197,7 @@ export default function WorkshopDashboard({ workshops = [], meta = {} }) {
 
       {/* ── Result count ── */}
       <p className="text-xs text-unihub-muted dark:text-gray-500">
-        Showing <span className="font-semibold text-unihub-text dark:text-gray-300">{filtered.length}</span> of {workshops.length} workshops
+        Showing <span className="font-semibold text-unihub-text dark:text-gray-300">{filtered.length}</span> of {liveWorkshops.length} workshops
       </p>
 
       {/* ── Active view ── */}
