@@ -1,0 +1,12 @@
+{
+  "name": "unihub-payment-gateway",
+  "version": "1.0.0",
+  "description": "Mock Payment Gateway for UniHub",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
