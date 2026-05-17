@@ -307,6 +307,135 @@ class WorkshopService {
 
     return publicResult;
   }
+
+  /**
+   * Update an existing workshop
+   */
+  static async updateWorkshop(id, data, userId) {
+    const { title, speaker, startTime, endTime, roomId, totalSeats, pricing, pdfJobId } = data;
+    const workshopIdBig = BigInt(id);
+
+    // Check if workshop exists
+    const existing = await prisma.workshop.findUnique({ where: { id: workshopIdBig } });
+    if (!existing) {
+      const err = new Error(`Workshop with ID ${id} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    // Find room by room_code to get its ID
+    const room = await prisma.room.findUnique({ where: { room_code: roomId } });
+    if (!room) {
+      throw new Error(`Room with code ${roomId} not found`);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Calculate available seats accurately based on current registrations
+      const activeRegCount = await tx.registration.count({
+        where: {
+          workshop_id: workshopIdBig,
+          status: { in: ['confirmed', 'pending_payment', 'reserved', 'waitlisted'] }
+        }
+      });
+      const availableSeats = Math.max(0, totalSeats - activeRegCount);
+
+      // Update the workshop
+      const updatedWorkshop = await tx.workshop.update({
+        where: { id: workshopIdBig },
+        data: {
+          title,
+          event_day: new Date(startTime),
+          start_time: new Date(startTime),
+          end_time: new Date(endTime),
+          room_id: room.id,
+          capacity: totalSeats,
+          available_seats: availableSeats,
+          price: pricing.isFree ? null : pricing.amount,
+        }
+      });
+
+      // Handle Speaker (delete existing mapping and set new)
+      if (speaker) {
+        await tx.workshopSpeaker.deleteMany({
+          where: { workshop_id: workshopIdBig }
+        });
+
+        let speakerRecord = await tx.speaker.findFirst({ where: { full_name: speaker } });
+        if (!speakerRecord) {
+          speakerRecord = await tx.speaker.create({
+            data: { full_name: speaker }
+          });
+        }
+        
+        await tx.workshopSpeaker.create({
+          data: {
+            workshop_id: workshopIdBig,
+            speaker_id: speakerRecord.id,
+            is_main_speaker: true
+          }
+        });
+      }
+
+      // If there was an AI PDF job, link the results
+      if (pdfJobId) {
+        const AiSummaryService = require('./aiSummary.service');
+        const jobData = await AiSummaryService.getJobStatus(pdfJobId);
+        
+        if (jobData && jobData.status === 'completed') {
+           const doc = await tx.workshopDocument.create({
+             data: {
+               workshop_id: workshopIdBig,
+               original_file_name: 'uploaded_document.pdf',
+               storage_path: 'local_storage',
+               mime_type: 'application/pdf',
+               uploaded_by: BigInt(userId),
+               upload_status: 'uploaded'
+             }
+           });
+
+           await tx.aiSummary.create({
+             data: {
+               workshop_id: workshopIdBig,
+               document_id: doc.id,
+               status: 'completed',
+               ai_model: 'gemini-1.5-flash',
+               raw_text: jobData.raw_text || '',
+               summary_text: jobData.summary_text || '',
+               suggested_title: jobData.suggested_title || '',
+               speaker_name: jobData.speaker_name || '',
+               completed_at: new Date()
+             }
+           });
+        }
+      }
+
+      return updatedWorkshop;
+    });
+
+    return result;
+  }
+
+  /**
+   * Cancel (soft-delete) an existing workshop
+   */
+  static async cancelWorkshop(id) {
+    const workshopIdBig = BigInt(id);
+    
+    // Check if workshop exists
+    const existing = await prisma.workshop.findUnique({ where: { id: workshopIdBig } });
+    if (!existing) {
+      const err = new Error(`Workshop with ID ${id} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const updated = await prisma.workshop.update({
+      where: { id: workshopIdBig },
+      data: { status: 'cancelled' }
+    });
+
+    return updated;
+  }
 }
 
 module.exports = WorkshopService;

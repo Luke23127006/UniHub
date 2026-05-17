@@ -132,6 +132,49 @@ class WorkshopController {
     }
   }
 
+  static async update(req, res) {
+    try {
+      if (!req.user || !req.user.sub) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      }
+      const { id } = req.params;
+      const updatedWorkshop = await WorkshopService.updateWorkshop(id, req.body, req.user.sub);
+      res.json({
+        status: 'success',
+        data: {
+          id: updatedWorkshop.id.toString(),
+          message: 'Workshop updated successfully'
+        }
+      });
+    } catch (error) {
+      console.error(`[WorkshopController] Error updating workshop ${req.params.id}:`, error);
+      res.status(error.statusCode || 500).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
+  static async delete(req, res) {
+    try {
+      const { id } = req.params;
+      const cancelledWorkshop = await WorkshopService.cancelWorkshop(id);
+      res.json({
+        status: 'success',
+        data: {
+          id: cancelledWorkshop.id.toString(),
+          message: 'Workshop cancelled successfully'
+        }
+      });
+    } catch (error) {
+      console.error(`[WorkshopController] Error deleting/cancelling workshop ${req.params.id}:`, error);
+      res.status(error.statusCode || 500).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
   static async listRooms(req, res) {
     try {
       const rooms = await prisma.room.findMany({

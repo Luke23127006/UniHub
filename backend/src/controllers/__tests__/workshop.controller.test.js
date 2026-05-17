@@ -79,4 +79,85 @@ describe('WorkshopController', () => {
       );
     });
   });
+
+  describe('update', () => {
+    it('should return 401 when user is unauthorized', async () => {
+      req.user = null;
+      await WorkshopController.update(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
+    it('should return 200 and updated workshop details on success', async () => {
+      req.user = { sub: 'creator-123' };
+      req.params.id = '1';
+      req.body = { title: 'Updated Title' };
+      
+      const mockUpdated = { id: BigInt(1), title: 'Updated Title' };
+      WorkshopService.updateWorkshop.mockResolvedValue(mockUpdated);
+
+      await WorkshopController.update(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        data: {
+          id: '1',
+          message: 'Workshop updated successfully'
+        }
+      });
+      expect(WorkshopService.updateWorkshop).toHaveBeenCalledWith('1', req.body, 'creator-123');
+    });
+
+    it('should return service error status code if update fails', async () => {
+      req.user = { sub: 'creator-123' };
+      req.params.id = '1';
+      
+      const mockError = new Error('Not found');
+      mockError.statusCode = 404;
+      WorkshopService.updateWorkshop.mockRejectedValue(mockError);
+
+      await WorkshopController.update(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          message: 'Not found'
+        })
+      );
+    });
+  });
+
+  describe('delete', () => {
+    it('should return 200 and success message on cancellation', async () => {
+      req.params.id = '1';
+      const mockCancelled = { id: BigInt(1), status: 'cancelled' };
+      WorkshopService.cancelWorkshop.mockResolvedValue(mockCancelled);
+
+      await WorkshopController.delete(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        data: {
+          id: '1',
+          message: 'Workshop cancelled successfully'
+        }
+      });
+      expect(WorkshopService.cancelWorkshop).toHaveBeenCalledWith('1');
+    });
+
+    it('should return 500 status code on general cancellation failure', async () => {
+      req.params.id = '1';
+      WorkshopService.cancelWorkshop.mockRejectedValue(new Error('DB Error'));
+
+      await WorkshopController.delete(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          message: 'DB Error'
+        })
+      );
+    });
+  });
 });
