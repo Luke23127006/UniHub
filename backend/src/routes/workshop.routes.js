@@ -33,7 +33,7 @@ router.put(
   '/:id',
   verifyToken,
   requireRoles(['Admin']),
-  (req, res) => res.status(501).json({ message: 'updateWorkshop – not yet implemented' })
+  WorkshopController.update
 );
 
 // DELETE /v1/workshops/:id
@@ -41,7 +41,7 @@ router.delete(
   '/:id',
   verifyToken,
   requireRoles(['Admin']),
-  (req, res) => res.status(501).json({ message: 'deleteWorkshop – not yet implemented' })
+  WorkshopController.delete
 );
 
 // GET /v1/workshops/:id/stats  – Admin and Staff
