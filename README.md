@@ -6,7 +6,7 @@ UniHub is a high-performance Workshop Registration and Management System designe
 
 ## 🏢 1. Core Services & System Architecture
 
-The UniHub ecosystem is orchestrated via [docker-compose.yml](file:///d:/HCMUS/Third%20Year/SystemDesign/UniHub/docker-compose.yml):
+The UniHub ecosystem is orchestrated via [docker-compose.yml](./docker-compose.yml):
 
 ### Core Application Services
 *   **`backend` (Node.js/Express):** Core API Gateway handling registration logic, JWT validation, Redis rate-limiting, and PostgreSQL transactional locks.
@@ -22,6 +22,46 @@ The UniHub ecosystem is orchestrated via [docker-compose.yml](file:///d:/HCMUS/T
 *   **`postgres` (PostgreSQL 15):** Relational database storing students, workshops, registrations, and transactions.
 *   **`redis` (Redis 7):** RAM-based cache storing Redlock keys and global API rate-limiting buckets.
 *   **`rabbitmq` (RabbitMQ 3):** Message broker managing decoupled event queues (push notifications and AI summaries) at `http://localhost:15672` (admin / admin).
+
+---
+
+## 📂 Project Structure
+
+```bash
+UniHub/
+├── ai-worker/           # Event-driven worker for AI summaries (Python)
+│   ├── main.py          # Gemini API processing & RabbitMQ listener
+│   ├── Dockerfile
+│   └── requirements.txt
+├── backend/             # Express API Gateway, Workers, & Jobs (Node.js)
+│   ├── src/
+│   │   ├── config/      # DB, Redis, and RabbitMQ initializations
+│   │   ├── controllers/ # HTTP Request Handlers
+│   │   ├── jobs/        # Scheduled cron jobs (e.g., CSV sync, seat release)
+│   │   ├── middlewares/ # Auth, RateLimiter, and Idempotency middlewares
+│   │   ├── prisma/      # Database Schema & Migrations
+│   │   ├── routes/      # Express API route registrations
+│   │   ├── services/    # Business logic & integrations
+│   │   └── workers/     # Background RabbitMQ consumers (e.g. notifications)
+│   ├── data/            # Seed data (e.g. initial students CSV)
+│   ├── Dockerfile
+│   ├── package.json
+│   └── server.js        # Main entry point
+├── frontend/            # Student & Admin dashboards (React + Vite)
+│   ├── src/             # Features, pages, and components
+│   ├── package.json
+│   └── vite.config.js
+├── mobile/
+│   └── unihub-mobile/   # Mobile app for check-in staff (React Native + Expo)
+│       ├── app/         # File-based routing (Expo Router)
+│       ├── src/         # Offline DB, QR scanning, and UI features
+│       └── package.json
+├── payment-gateway/     # Resilient Mock payment service (Express)
+│   ├── server.js
+│   └── Dockerfile
+├── docs/                # Blueprint Specifications, Architecture, & Script Scenarios
+└── docker-compose.yml   # Infrastructure Orchestration Spec
+```
 
 ---
 
@@ -120,3 +160,58 @@ UniHub implements the following system design patterns to maintain ultra-fast pr
 
 ### 4. Third-Party Resilience (Circuit Breaker)
 *   **Resilient Gateway Clients:** Integrates explicit HTTP request abort signals (`AbortController`) to block payment timeouts and shields the core API gateway from crashing if third-party services lag.
+
+---
+
+## 🧪 4. Running the Automated Test Suites
+
+UniHub includes robust and comprehensive test coverage for backend, frontend, and mobile components. You can run all test suites locally to verify architectural stability:
+
+### 1. Backend Service Tests (Jest)
+Runs 22 test suites with 246 assertions covering authentication, database transactions, locking, rate limiting, and worker queues.
+```bash
+cd backend
+npm install
+npm test
+```
+
+### 2. Frontend Web Dashboard Tests (Vitest)
+Validates core component behaviors, form state updates, checkout screens, and PDF extraction UI.
+```bash
+cd frontend
+npm install
+npm test
+```
+
+### 3. Mobile Client Tests (Jest + React Native Testing Library)
+Verifies QR scanner code, offline storage (SQLite) synchronization queues, and landing views.
+```bash
+cd mobile/unihub-mobile
+npm install
+npm test
+```
+
+---
+
+## 🚶‍♂️ 5. Feature Demo Walkthrough Scenarios
+
+Follow these rapid walkthroughs to experience the core system design capabilities:
+
+### Scenario A: Real-Time Concurrency & k6 Load Testing
+1. Ensure your backend containers are running (`docker compose up -d`).
+2. Run the load test scenario: `docker compose --profile test up --force-recreate k6`.
+3. Open **Redis Commander** (`http://localhost:8081`) to see lock and rate-limiter keys.
+4. Verify in the Database/Admin panel that Workshop capacities were never oversold.
+
+### Scenario B: Payment Resiliency & Circuit Breaker Simulation
+1. Turn off the payment service manually: `docker compose stop payment-gateway`.
+2. Log in as a Student (`test@unihub.com`) and try to buy a paid Workshop ticket.
+3. The server immediately aborts the connection via `AbortController` and activates the **Circuit Breaker** (Open state), saving server threads.
+4. You can still browse other free workshops and view your active tickets (Graceful Degradation).
+
+### Scenario C: Offline Check-in & Sync Queue on Mobile
+1. Open the Mobile App on your device (using Expo Go).
+2. Log in as Staff (`staff1@unihub.com`) and go to the Check-in Scanner page.
+3. Turn off your device's WiFi/Mobile Data (simulate offline room connection).
+4. Scan a student's QR code. The app validates it, displays "Offline Checked-in", and caches the record in SQLite.
+5. Re-enable WiFi/Data. The app's Sync Queue detects network recovery and instantly flushes the records to PostgreSQL.
