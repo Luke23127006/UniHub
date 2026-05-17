@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
 
-const RESERVED_TTL_MINUTES = 15;
+const RESERVED_TTL_MINUTES = 10;
 const CRON_SCHEDULE = '*/5 * * * *'; // Run every 5 minutes for better responsiveness
 const JOB_LOCK_KEY = 'lock:jobs:releaseReservedSeats';
 const JOB_LOCK_TTL_MS = 4 * 60 * 1000;

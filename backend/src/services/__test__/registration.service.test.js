@@ -35,7 +35,7 @@ jest.mock("../../config/db", () => {
   return mockDeep();
 });
 
-jest.mock("../paymentService", () => ({
+jest.mock("../payment.service", () => ({
   isCircuitOpen: jest.fn(),
   initiatePayment: jest.fn(),
 }));
@@ -44,7 +44,7 @@ jest.mock("../paymentService", () => ({
 
 const redlock = require("../../config/redlock");
 const prisma = require("../../config/db");
-const paymentService = require("../paymentService");
+const paymentService = require("../payment.service");
 const {
   RegistrationService,
   RegistrationOutcome,

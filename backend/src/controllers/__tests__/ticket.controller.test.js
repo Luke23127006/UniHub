@@ -1,14 +1,14 @@
 'use strict';
 
-jest.mock('../config/db', () => {
+jest.mock('../../config/db', () => {
   const { mockDeep } = require('jest-mock-extended');
   return mockDeep();
 });
-jest.mock('../utils/qrToken');
+jest.mock('../../utils/qrToken');
 
-const prisma = require('../config/db');
-const { generateQrToken } = require('../utils/qrToken');
-const TicketController = require('./ticket.controller');
+const prisma = require('../../config/db');
+const { generateQrToken } = require('../../utils/qrToken');
+const TicketController = require('../ticket.controller');
 
 function makeRes() {
   const res = {};

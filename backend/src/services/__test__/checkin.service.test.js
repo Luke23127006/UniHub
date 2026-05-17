@@ -1,8 +1,8 @@
-const CheckinService = require('../services/checkinService');
-const prisma = require('../config/db');
+const CheckinService = require('../checkin.service');
+const prisma = require('../../config/db');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../config/db', () => ({
+jest.mock('../../config/db', () => ({
   registration: {
     findUnique: jest.fn(),
   },

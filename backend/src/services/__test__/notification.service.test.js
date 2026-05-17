@@ -14,7 +14,7 @@ jest.mock('../../utils/rabbitmq', () => ({
 
 const prisma          = require('../../config/db');
 const { publishMessage } = require('../../utils/rabbitmq');
-const { queueNotification } = require('./notification.service');
+const { queueNotification } = require('../notification/notification.service');
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 

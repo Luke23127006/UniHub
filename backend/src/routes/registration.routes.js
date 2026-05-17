@@ -1,12 +1,13 @@
 const express = require('express');
-const RegistrationController = require('../controllers/registrationController');
+const RegistrationController = require('../controllers/registration.controller');
 const authMiddleware = require('../middlewares/authMiddleware');
 const { workshopRegistrationLimiter } = require('../middlewares/rateLimitMiddleware');
+const checkIdempotency = require('../middlewares/checkIdempotency.middleware');
 
 const router = express.Router();
 
-// [PHASE 5] Synchronous registration with immediate seat reservation
-router.post('/', workshopRegistrationLimiter, authMiddleware, RegistrationController.registerSynchronous);
+// [PHASE 5] Synchronous registration with immediate seat reservation and idempotency check
+router.post('/', authMiddleware, workshopRegistrationLimiter, checkIdempotency, RegistrationController.registerSynchronous);
 
 // [PHASE 6] Get my registrations
 router.get('/my', authMiddleware, RegistrationController.getMyRegistrations);

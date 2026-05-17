@@ -46,7 +46,7 @@ function sha256(value) {
 /** Constructs the exact Redis key the middleware will use for a given raw key.
  *  Must replicate the source's scoping formula: userId:method:originalUrl:rawKey */
 function expectedRedisKey(rawKey, reqObj) {
-  const userId = reqObj?.user?.id ?? 'anon';
+  const userId = reqObj?.user?.id ?? reqObj?.user?.sub ?? 'anon';
   const scopedKey = `${userId}:${reqObj?.method}:${reqObj?.originalUrl}:${rawKey}`;
   return `${REDIS_PREFIX}${sha256(scopedKey)}`;
 }
@@ -342,6 +342,40 @@ describe('checkIdempotency middleware', () => {
         await runAndTriggerInterceptor();
 
         expect(prisma.idempotencyKey.create).not.toHaveBeenCalled();
+      });
+    });
+
+    // ── User ID as sub (JWT payload) ──────────────────────────────────────────
+
+    describe('when req.user has a sub property instead of id', () => {
+      beforeEach(() => {
+        req.user = { sub: '12345' };
+      });
+
+      it('saves the response to Redis with sub as the key scope', async () => {
+        await runAndTriggerInterceptor();
+
+        expect(redisClient.set).toHaveBeenCalledWith(
+          expectedRedisKey(RAW_KEY, req),
+          JSON.stringify({ status: RESPONSE_STATUS, body: RESPONSE_BODY }),
+          'EX',
+          REDIS_TTL_SECONDS,
+        );
+      });
+
+      it('saves the response to the IdempotencyKey table with sub converted to BigInt', async () => {
+        await runAndTriggerInterceptor();
+
+        expect(prisma.idempotencyKey.create).toHaveBeenCalledWith({
+          data: {
+            key_hash: sha256(`12345:${req.method}:${req.originalUrl}:${RAW_KEY}`),
+            user_id: BigInt(12345),
+            resource_type: req.baseUrl + req.path,
+            response_status: RESPONSE_STATUS,
+            response_body: JSON.stringify(RESPONSE_BODY),
+            expires_at: expect.any(Date),
+          },
+        });
       });
     });
 

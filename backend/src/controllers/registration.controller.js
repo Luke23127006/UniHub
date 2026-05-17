@@ -1,106 +1,177 @@
-const crypto = require('crypto');
-const prisma  = require('../config/db');
 const { RegistrationService, RegistrationOutcome } = require('../services/registration.service');
-const { queueNotification } = require('../services/notification/notification.service');
-
-const OUTCOME_RESPONSES = {
-  [RegistrationOutcome.FREE_CONFIRMED]: (res, { registrationId }) =>
-    res.status(201).json({ message: 'Registration successful.', registrationId }),
-
-  [RegistrationOutcome.PAID_PENDING_PAYMENT]: (res, { registrationId, paymentUrl }) =>
-    res.status(201).json({ status: 'pending_payment', paymentUrl, registrationId }),
-
-  [RegistrationOutcome.PAID_RESERVED_DEGRADED]: (res, { registrationId }) =>
-    res.status(202).json({
-      message: 'Payment gateway is under maintenance. Your seat is reserved. Please pay later.',
-      registrationId,
-    }),
-
-  [RegistrationOutcome.PAID_GATEWAY_ERROR]: (res, { registrationId }) =>
-    res.status(503).json({
-      message: 'Payment gateway temporarily unavailable. Please try again later.',
-      registrationId,
-    }),
-};
+const prisma = require('../config/db');
 
 class RegistrationController {
   /**
-   * POST /workshops/:id/register
-   * Delegates all business logic to RegistrationService and maps the typed outcome
-   * to the appropriate HTTP response.
+   * [PHASE 5] Synchronous registration with immediate seat reservation.
    */
-  static async registerWorkshop(req, res) {
+  static async registerSynchronous(req, res) {
     try {
-      const workshopId = parseInt(req.params.id, 10);
+      const { workshopId } = req.body;
+      const userId = req.user.sub;
 
-      if (isNaN(workshopId) || workshopId <= 0) {
-        return res.status(400).json({ message: 'Invalid workshop ID' });
+      if (!workshopId) {
+        return res.status(400).json({ message: 'Workshop ID is required' });
       }
 
-      const result = await RegistrationService.registerForWorkshop(workshopId, req.user.id);
+      const result = await RegistrationService.registerForWorkshop(workshopId, userId);
 
-      const outcomeResponse = OUTCOME_RESPONSES[result?.outcome];
-      if (!outcomeResponse) {
-        console.error('[RegistrationController] Unexpected registration outcome:', result?.outcome, result);
-        return res.status(500).json({ message: 'Internal server error' });
-      }
-      // Respond immediately — notification must never block or fail the HTTP flow.
-      const httpResponse = outcomeResponse(res, result);
-
-      // Only FREE_CONFIRMED means the seat is secured right now.
-      // Paid flows must queue after the payment webhook confirms settlement.
-      if (result.outcome === RegistrationOutcome.FREE_CONFIRMED) {
-        _queueTicketCreatedNotification(workshopId, req.user.id, result.registrationId)
-          .catch((err) =>
-            console.error('[RegistrationController] Notification queue error:', err.message),
-          );
-      }
-
-      return httpResponse;
+      return res.status(201).json({
+        message: 'Registration request processed.',
+        registrationId: result.registrationId,
+        paymentUrl: result.paymentUrl,
+        outcome: result.outcome
+      });
     } catch (error) {
-      const status = error.statusCode ?? 500;
-      if (status < 500) {
-        return res.status(status).json({ message: error.message });
-      }
-      console.error('[RegistrationController] Unexpected error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      console.error('[RegistrationController] Error:', error.message);
+      return res.status(error.statusCode || 500).json({ message: error.message });
     }
   }
-}
 
-// ─── Private helper ──────────────────────────────────────────────────────────
+  /**
+   * [PHASE 6] Get all registrations for the logged-in student.
+   */
+  static async getMyRegistrations(req, res) {
+    try {
+      const userId = req.user.sub;
 
-/**
- * Resolves the workshop title and enqueues a ticket.created.event notification.
- *
- * Lives outside the class because it runs after the HTTP response is committed.
- * Any error is caught by the caller's .catch() and only logged — never surfaces
- * to the client.
- *
- * @param {number} workshopId
- * @param {bigint} userId
- * @param {string} registrationId  — stringified BigInt from RegistrationService
- */
-async function _queueTicketCreatedNotification(workshopId, userId, registrationId) {
-  const workshop = await prisma.workshop.findUnique({
-    where:  { id: BigInt(workshopId) },
-    select: { title: true },
-  });
+      const student = await prisma.student.findUnique({
+        where: { user_id: userId },
+        select: { id: true }
+      });
 
-  // Mock QR token — swap for a real QrCode.create() once that service exists.
-  const qrToken = crypto.randomUUID();
+      if (!student) {
+        return res.status(404).json({ message: 'Student record not found' });
+      }
 
-  await queueNotification(
-    userId,
-    'ticket.created.event',
-    'registration',
-    registrationId,
-    {
-      qrToken,
-      workshopName:   workshop?.title ?? 'Workshop',
-      registrationId,
-    },
-  );
+      const registrations = await prisma.registration.findMany({
+        where: { student_id: student.id },
+        include: {
+          workshop: {
+            include: {
+              room: true
+            }
+          }
+        },
+        orderBy: { registered_at: 'desc' }
+      });
+
+      return res.status(200).json(registrations.map(r => ({
+        id: r.id.toString(),
+        workshop_id: r.workshop_id.toString(),
+        status: r.status.toUpperCase(), // Normalize to uppercase for frontend
+        payment_status: r.workshop.is_paid ? (r.status === 'confirmed' ? 'PAID' : 'PENDING') : 'FREE',
+        workshop: {
+          title: r.workshop.title,
+          start_time: r.workshop.start_time,
+          room: r.workshop.room ? {
+            room_code: r.workshop.room.room_code,
+            building: r.workshop.room.building
+          } : null
+        }
+      })));
+    } catch (error) {
+      console.error('[RegistrationController] getMyRegistrations Error:', error.message);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * [PHASE 5] Webhook for payment gateway callback.
+   */
+  static async handlePaymentWebhook(req, res) {
+    try {
+      const { registrationId, status } = req.body;
+
+      if (status === 'success' || status === 'completed') {
+        await RegistrationService.confirmRegistration(registrationId);
+      }
+
+      return res.status(200).json({ message: 'Webhook received' });
+    } catch (error) {
+      console.error('[RegistrationController] Webhook Error:', error.message);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  /**
+   * [PHASE 6] Get registration status and full ticket details.
+   */
+  static async getRegistrationStatus(req, res) {
+    try {
+      const registrationId = BigInt(req.params.id);
+      const registration = await prisma.registration.findUnique({
+        where: { id: registrationId },
+        include: {
+          workshop: {
+            include: { room: true }
+          },
+          student: true
+        }
+      });
+
+      if (!registration) {
+        return res.status(404).json({ message: 'Registration not found' });
+      }
+
+      // Generate QR token if confirmed
+      let checkinToken = null;
+      if (registration.status === 'confirmed') {
+        const TicketService = require('../services/ticket.service');
+        try {
+          // Note: we use req.user.sub for IDOR protection if needed, 
+          // but here we just need to generate the token for the owner.
+          checkinToken = await TicketService.generateTicketJWT(registration.id, registration.student.user_id);
+        } catch (qrErr) {
+          console.error('[RegistrationController] QR Generation failed:', qrErr.message);
+        }
+      }
+
+      return res.status(200).json({
+        id: registration.id.toString(),
+        workshop_id: registration.workshop_id.toString(),
+        status: registration.status.toUpperCase(),
+        payment_status: registration.workshop.is_paid ? (registration.status === 'confirmed' ? 'PAID' : 'PENDING') : 'FREE',
+        price: registration.workshop.price,
+        currency: registration.workshop.currency || 'VND',
+        checkin_token: checkinToken,
+        workshop: {
+          title: registration.workshop.title,
+          start_time: registration.workshop.start_time,
+          room: registration.workshop.room ? {
+            room_code: registration.workshop.room.room_code,
+            building: registration.workshop.room.building
+          } : null
+        },
+        student: {
+          full_name: registration.student.full_name,
+          email: registration.student.email
+        }
+      });
+    } catch (error) {
+      console.error('[RegistrationController] getRegistrationStatus Error:', error.message);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async cancelRegistration(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.sub; // From authMiddleware (JWT 'sub' field)
+
+      const result = await RegistrationService.cancelTicket(id, userId);
+
+      return res.status(200).json({
+        message: 'Registration cancelled successfully',
+        registration: result
+      });
+    } catch (error) {
+      console.error('[RegistrationController] cancelRegistration error:', error);
+      return res.status(error.statusCode || 500).json({
+        message: error.message || 'Internal server error'
+      });
+    }
+  }
 }
 
 module.exports = RegistrationController;

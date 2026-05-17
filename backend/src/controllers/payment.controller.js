@@ -1,5 +1,5 @@
 const { RegistrationService } = require('../services/registration.service');
-const paymentService = require('../services/paymentService');
+const paymentService = require('../services/payment.service');
 
 class PaymentController {
   /**
@@ -18,11 +18,11 @@ class PaymentController {
 
       // Step 1: Verify with Mock Payment Gateway
       const verification = await paymentService.verifyPayment(registrationId);
-      
+
       if (!verification.success) {
-        return res.status(402).json({ 
-          success: false, 
-          message: 'Payment verification failed at gateway. Please ensure payment was completed.' 
+        return res.status(402).json({
+          success: false,
+          message: 'Payment verification failed at gateway. Please ensure payment was completed.'
         });
       }
 
@@ -37,11 +37,11 @@ class PaymentController {
       });
     } catch (error) {
       console.error('[PaymentController] Error:', error.message);
-      
+
       // Handle Circuit Breaker Open state
       if (error.name === 'CircuitOpenError') {
-        return res.status(503).json({ 
-          message: 'Payment gateway is temporarily unavailable. Please try again in a few minutes.' 
+        return res.status(503).json({
+          message: 'Payment gateway is temporarily unavailable. Please try again in a few minutes.'
         });
       }
 

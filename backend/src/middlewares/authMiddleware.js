@@ -16,6 +16,16 @@ const authMiddleware = (req, res, next) => {
  * @type {import('express').RequestHandler}
  */
 const verifyToken = (req, res, next) => {
+  // Allow Mock Authentication under test/development for load testing (k6 uses x-user-id)
+  if (process.env.NODE_ENV !== 'production' && req.headers['x-user-id']) {
+    req.user = {
+      sub: req.headers['x-user-id'],
+      email: `student_${req.headers['x-user-id']}@unihub.edu.vn`,
+      role: 'Student'
+    };
+    return next();
+  }
+
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

@@ -1,3 +1,5 @@
+// RUN: docker compose --profile test up --force-recreate k6
+
 const { RateLimiterRedis } = require('rate-limiter-flexible');
 const redisClient = require('../config/redis');
 
@@ -22,6 +24,11 @@ const registrationRateLimiter = new RateLimiterRedis({
 
 function makeMiddleware(limiter, keyFn) {
   return async (req, res, next) => {
+    // Bypass global rate limiting in non-production environments to avoid blocking the developer or test tools
+    if (process.env.NODE_ENV !== 'production' && limiter.keyPrefix === 'rl:global') {
+      return next();
+    }
+
     const key = keyFn(req);
     try {
       await limiter.consume(key);
@@ -44,7 +51,13 @@ const globalLimiter = makeMiddleware(
 
 const registrationLimiter = makeMiddleware(
   registrationRateLimiter,
-  (req) => (req.user && req.user.id != null ? String(req.user.id) : req.ip),
+  (req) => {
+    if (req.user) {
+      const userId = req.user.id || req.user.sub;
+      if (userId != null) return String(userId);
+    }
+    return req.ip;
+  },
 );
 
 module.exports = { globalLimiter, registrationLimiter };
