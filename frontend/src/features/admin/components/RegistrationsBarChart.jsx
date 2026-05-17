@@ -32,7 +32,7 @@ export default function RegistrationsBarChart({ data = [], loading }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Spin size="large" tip="Loading chart…" />
+        <Spin size="large" description="Loading chart…" />
       </div>
     );
   }

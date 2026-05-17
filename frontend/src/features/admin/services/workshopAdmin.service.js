@@ -18,7 +18,16 @@ export const deleteWorkshop = (id) =>
 export const uploadPdfForSummary = (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  return axiosClient.post('/v1/workshops/pdf-summary', formData, {
+  return axiosClient.post('/v1/workshops/pdf-upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const getPdfJobStatus = (jobId) =>
+  axiosClient.get(`/v1/workshops/pdf-upload/${jobId}`);
+
+export const getRooms = () =>
+  axiosClient.get('/v1/workshops/rooms');
+
+export const getSpeakers = () =>
+  axiosClient.get('/v1/workshops/speakers');
