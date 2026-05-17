@@ -1,6 +1,7 @@
 const WorkshopService = require('../services/workshop.service');
 const AiSummaryService = require('../services/aiSummary.service');
 const prisma = require('../config/db');
+const { addClient, removeClient } = require('../config/sseManager');
 
 class WorkshopController {
   static async list(req, res) {
@@ -189,6 +190,28 @@ class WorkshopController {
       console.error('[WorkshopController] Error listing rooms:', error);
       res.status(500).json({ status: 'error', message: error.message });
     }
+  }
+
+  static seatUpdatesSSE(req, res) {
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders();
+    res.write(': connected\n\n');
+
+    addClient(res);
+
+    const heartbeat = setInterval(() => {
+      try { res.write(': ping\n\n'); } catch { /* client gone */ }
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      removeClient(res);
+    });
   }
 
   static async listSpeakers(req, res) {

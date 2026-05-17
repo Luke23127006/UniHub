@@ -16,6 +16,9 @@ router.get('/rooms', verifyToken, WorkshopController.listRooms);
 // GET /v1/workshops/speakers – list all speakers
 router.get('/speakers', verifyToken, WorkshopController.listSpeakers);
 
+// GET /v1/workshops/sse/seat-updates – realtime seat count stream (SSE)
+router.get('/sse/seat-updates', WorkshopController.seatUpdatesSSE);
+
 // GET /v1/workshops/:id    – workshop detail + AI summary
 router.get('/:id', WorkshopController.getById);
 
