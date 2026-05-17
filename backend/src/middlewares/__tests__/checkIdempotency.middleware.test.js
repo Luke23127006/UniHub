@@ -12,14 +12,14 @@
 
 // ── Module mocks (must be declared before any require) ────────────────────────
 
-jest.mock('../config/redis', () => ({
+jest.mock('../../config/redis', () => ({
   get: jest.fn(),
   set: jest.fn(),
 }));
 
 // The factory runs inside the Jest environment, so jest.fn() (used internally
 // by mockDeep) is available here even though it would fail outside Jest.
-jest.mock('../config/db', () => {
+jest.mock('../../config/db', () => {
   const { mockDeep } = require('jest-mock-extended');
   return mockDeep();
 });
@@ -27,9 +27,9 @@ jest.mock('../config/db', () => {
 // ── Imports ───────────────────────────────────────────────────────────────────
 
 const crypto = require('crypto');
-const redisClient = require('../config/redis');
-const prisma = require('../config/db');
-const checkIdempotency = require('./checkIdempotency.middleware');
+const redisClient = require('../../config/redis');
+const prisma = require('../../config/db');
+const checkIdempotency = require('../checkIdempotency.middleware');
 
 // ── Shared constants (mirror the middleware's internal values) ─────────────────
 

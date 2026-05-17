@@ -2,13 +2,13 @@
 // hoists its initialisation above the jest.mock() factory call.
 const mockConsume = jest.fn();
 
-jest.mock('../config/redis', () => ({}));
+jest.mock('../../config/redis', () => ({}));
 
 jest.mock('rate-limiter-flexible', () => ({
   RateLimiterRedis: jest.fn().mockImplementation(() => ({ consume: mockConsume })),
 }));
 
-const { globalLimiter, registrationLimiter } = require('./rateLimiter.middleware');
+const { globalLimiter, registrationLimiter } = require('../rateLimiter.middleware');
 
 const TOO_MANY_REQUESTS = {
   error: 'TOO_MANY_REQUESTS',

@@ -13,7 +13,6 @@ UniHub Mobile adopts a **Feature-Based Architecture** combined with **Expo Route
 
 ```
 mobile/
-  unihub-mobile/
     app/                # Routing only (Expo Router)
       (tabs)/           # Tab navigation (routes)
       ...
