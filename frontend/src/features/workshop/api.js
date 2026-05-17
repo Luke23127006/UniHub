@@ -29,6 +29,7 @@ function normalizeWorkshop(workshop) {
     end_time: endTime,
     room: ws?.room ?? { room_code: 'TBA', name: 'To be announced', building: 'TBA' },
     speakers: Array.isArray(ws?.speakers) ? ws.speakers : [],
+    ai_summaries: ws?.ai_summaries ?? [],
   };
 }
 

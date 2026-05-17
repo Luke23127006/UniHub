@@ -8,9 +8,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/shared/hooks/use-auth';
 import { WorkshopProvider } from '@/features/workshop/context/WorkshopContext';
 import { resetAppData } from '@/resetDB/reset';
+import { FlatListComponent } from 'react-native';
 
 // Toggle this to true to wipe all local data for testing
-const SHOULD_RESET_DATA = true;
+const SHOULD_RESET_DATA = false;
 
 export const unstable_settings = {
   anchor: '(tabs)',

@@ -53,13 +53,16 @@ const UserCircleIcon = () => (
 
 export default function WorkshopDetailPage() {
   const workshop = useLoaderData();
+  const summaryText = workshop.ai_summaries?.[0]?.summary_text;
+  const sentences = summaryText ? summaryText.split(/[.!?]\s+/).filter(Boolean) : [];
+  const introText = sentences.slice(0, 2).join('. ') + (sentences.length > 0 ? '.' : '');
+  const bulletPoints = sentences.slice(2);
   const seatsAvailable = workshop.available_seats || 0;
   const capacity = workshop.capacity || 1;
   const occupancyPercentage = Math.min(100, Math.max(0, ((capacity - seatsAvailable) / capacity) * 100));
 
   return (
-    <div className="relative min-h-[calc(100vh-8rem)] py-8 bg-white dark:bg-[#050505]">
-      
+    <div className="relative min-h-[calc(100vh-8rem)] py-8 ">
       {/* Subtle Minimalist Background Grid */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06]" 
            style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
@@ -155,6 +158,78 @@ export default function WorkshopDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* AI Executive Summary - Premium Glassmorphic Card */}
+        {summaryText && (
+          <section className="relative overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-cyan-400/10 bg-gradient-to-br from-cyan-500/[0.02] via-white to-purple-500/[0.02] dark:from-gray-900/90 dark:to-black p-8 sm:p-10 shadow-xl dark:shadow-2xl">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-0 right-0 w-[18rem] h-[18rem] bg-cyan-500/5 dark:bg-cyan-500/10 rounded-full blur-[8rem] pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-[18rem] h-[18rem] bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-[8rem] pointer-events-none"></div>
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                  <svg className="w-4 h-4 animate-[pulse_1.5s_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-900 dark:text-white">
+                    AI Smart Insights
+                  </h2>
+                  <p className="text-[9px] font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">
+                    Real-time synthesis & value extraction
+                  </p>
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 text-[9px] font-mono uppercase tracking-widest self-start sm:self-auto">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-[ping_1.5s_infinite]"></span>
+                Gemini-Flash Active
+              </div>
+            </div>
+
+            {/* Content Layout: 2 Columns */}
+            <div className="grid gap-8 lg:grid-cols-12 relative z-10">
+              {/* Column 1: Core Overview (Left) - Span 7 */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="relative pl-6 sm:pl-8 border-l-2 border-cyan-500/50">
+                  <span className="absolute left-0 top-0 -translate-x-[60%] -translate-y-[40%] text-6xl text-cyan-500/[0.04] dark:text-cyan-500/10 font-serif leading-none select-none">“</span>
+                  <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 uppercase tracking-widest block mb-2">Executive Overview</span>
+                  <p className="text-base sm:text-lg text-gray-700 dark:text-gray-200 leading-relaxed font-medium italic first-letter:text-3xl first-letter:font-black first-letter:text-cyan-600 dark:first-letter:text-cyan-400 first-letter:float-left first-letter:mr-2 first-letter:mt-1">
+                    {introText}
+                  </p>
+                </div>
+              </div>
+
+              {/* Column 2: Highlights / Focus Areas (Right) - Span 5 */}
+              <div className="lg:col-span-5 bg-gray-50/50 dark:bg-white/[0.01] border border-gray-100 dark:border-gray-800/80 rounded-3xl p-6 space-y-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-500 dark:text-purple-400">✦</span>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                    Key Takeaways & Agenda
+                  </h3>
+                </div>
+
+                <div className="space-y-4">
+                  {bulletPoints.map((point, index) => {
+                    const cleanPoint = point.trim() + (point.endsWith('.') ? '' : '.');
+                    return (
+                      <div key={index} className="flex gap-3 group">
+                        <div className="shrink-0 mt-1 h-4 w-4 rounded-full border border-cyan-500/30 flex items-center justify-center text-[8px] text-cyan-600 dark:text-cyan-400 font-bold bg-cyan-500/5 group-hover:bg-cyan-500/20 group-hover:border-cyan-500 dark:group-hover:border-cyan-400 transition-colors">
+                          0{index + 1}
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                          {cleanPoint}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Speakers - Simplified */}
         {workshop.speakers && workshop.speakers.length > 0 && (

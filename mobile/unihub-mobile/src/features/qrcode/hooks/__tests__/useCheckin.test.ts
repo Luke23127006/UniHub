@@ -11,6 +11,9 @@ jest.mock('jwt-decode');
 jest.mock('expo-network', () => ({
   getNetworkStateAsync: jest.fn().mockResolvedValue({ isConnected: true }),
 }));
+jest.mock('@/shared/utils/security', () => ({
+  verifyHS256: jest.fn().mockResolvedValue(true),
+}));
 
 describe('useCheckin', () => {
   const mockDb: any = {

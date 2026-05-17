@@ -16,7 +16,7 @@ const axiosClient = axios.create({
 // Attaches the stored JWT to every outgoing request when present.
 axiosClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -47,7 +47,8 @@ axiosClient.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
-      localStorage.removeItem('access_token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
       // Use onClose to redirect after the toast disappears — avoids an abrupt jump.
       message.error({
         content: 'Your session has expired. Redirecting to login…',

@@ -13,9 +13,16 @@ import {
   Divider,
   Space,
   message,
+  Select,
+  AutoComplete,
 } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import { uploadPdfForSummary } from '@/features/admin/services/workshopAdmin.service';
+import {
+  uploadPdfForSummary,
+  getPdfJobStatus,
+  getRooms,
+  getSpeakers
+} from '@/features/admin/services/workshopAdmin.service';
 
 const { Dragger } = Upload;
 
@@ -28,13 +35,13 @@ function toFormValues(workshop) {
   if (!workshop) return {};
   return {
     title: workshop.title,
-    speaker: workshop.speaker,
-    startTime: workshop.startTime ? dayjs(workshop.startTime) : null,
-    endTime: workshop.endTime ? dayjs(workshop.endTime) : null,
-    roomId: workshop.room?.name ?? '',
-    totalSeats: workshop.seats?.total ?? null,
-    isFree: workshop.pricing?.isFree ?? true,
-    amount: workshop.pricing?.amount ?? null,
+    speaker: workshop.speaker || workshop.speakers?.[0]?.full_name || '',
+    startTime: workshop.start_time ? dayjs(workshop.start_time) : null,
+    endTime: workshop.end_time ? dayjs(workshop.end_time) : null,
+    roomId: workshop.room?.room_code || workshop.room_id || '',
+    totalSeats: workshop.capacity ?? null,
+    isFree: !workshop.price,
+    amount: workshop.price ?? null,
   };
 }
 
@@ -42,11 +49,17 @@ export default function WorkshopFormModal({ open, mode, workshop, submitting, on
   const [form] = Form.useForm();
   const [pdfUploading, setPdfUploading] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [pdfJobId, setPdfJobId] = useState(null);
   const isFree = Form.useWatch('isFree', form);
+
+  const [rooms, setRooms] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setFileList([]);
+    setPdfJobId(null);
     if (mode === 'edit' && workshop) {
       form.setFieldsValue(toFormValues(workshop));
     } else {
@@ -55,15 +68,55 @@ export default function WorkshopFormModal({ open, mode, workshop, submitting, on
     }
   }, [open, mode, workshop, form]);
 
+  useEffect(() => {
+    if (!open) return;
+    const fetchRoomsAndSpeakers = async () => {
+      setLoadingData(true);
+      try {
+        const [roomsRes, speakersRes] = await Promise.all([
+          getRooms(),
+          getSpeakers()
+        ]);
+        setRooms(roomsRes.data.data || []);
+        setSpeakers(speakersRes.data.data || []);
+      } catch (err) {
+        console.error('Failed to fetch rooms/speakers data', err);
+        message.error('Failed to load rooms and speakers. Dropdowns may be empty.');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchRoomsAndSpeakers();
+  }, [open]);
+
   const handlePdfRequest = async ({ file, onSuccess, onError }) => {
     setPdfUploading(true);
     try {
       const res = await uploadPdfForSummary(file);
-      const { suggestedTitle, speakerName } = res.data.data;
-      form.setFieldsValue({ title: suggestedTitle, speaker: speakerName });
-      message.success('AI extracted workshop details from PDF');
-      onSuccess(res.data);
-    } catch {
+      const { jobId } = res.data.data;
+      setPdfJobId(jobId);
+
+      // Start polling
+      let status = 'pending';
+      let pollRes;
+      for (let i = 0; i < 30; i++) { // Max 30 attempts = ~60 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        pollRes = await getPdfJobStatus(jobId);
+        status = pollRes.data.data.status;
+        
+        if (status === 'completed' || status === 'failed') break;
+      }
+
+      if (status === 'completed') {
+        const { suggested_title, speaker_name } = pollRes.data.data;
+        form.setFieldsValue({ title: suggested_title, speaker: speaker_name });
+        message.success('AI extracted workshop details from PDF');
+        onSuccess(res.data);
+      } else {
+        throw new Error('Analysis failed or timed out');
+      }
+    } catch (err) {
+      console.error(err);
       message.error('Failed to process PDF — please try again.');
       onError(new Error('Upload failed'));
     } finally {
@@ -79,6 +132,7 @@ export default function WorkshopFormModal({ open, mode, workshop, submitting, on
       endTime: values.endTime?.toISOString(),
       roomId: values.roomId,
       totalSeats: values.totalSeats,
+      pdfJobId: pdfJobId,
       pricing: {
         isFree: values.isFree ?? true,
         amount: values.isFree ? 0 : (values.amount ?? 0),
@@ -145,7 +199,14 @@ export default function WorkshopFormModal({ open, mode, workshop, submitting, on
           label="Speaker"
           rules={[{ required: true, message: 'Speaker name is required' }]}
         >
-          <Input placeholder="e.g. ThS. Lê Văn B" />
+          <AutoComplete
+            placeholder="Type or select a speaker"
+            options={speakers.map(s => ({ value: s.full_name, label: `${s.full_name} (${s.organization || 'No Org'})` }))}
+            filterOption={(inputValue, option) =>
+              option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+            }
+            loading={loadingData}
+          />
         </Form.Item>
 
         {/* ── Schedule ─────────────────────────────────────────────── */}
@@ -168,11 +229,17 @@ export default function WorkshopFormModal({ open, mode, workshop, submitting, on
         {/* ── Venue & Capacity ─────────────────────────────────────── */}
         <Form.Item
           name="roomId"
-          label="Room ID"
-          rules={[{ required: true, message: 'Room ID is required' }]}
-          tooltip="The unique code for the venue room (e.g. room_102)"
+          label="Venue Room"
+          rules={[{ required: true, message: 'Room selection is required' }]}
+          tooltip="The venue room where the workshop takes place"
         >
-          <Input placeholder="e.g. room_102" />
+          <Select placeholder="Select a room" loading={loadingData}>
+            {rooms.map(r => (
+              <Select.Option key={r.room_code} value={r.room_code}>
+                {r.room_code} - {r.name} (Cap: {r.capacity})
+              </Select.Option>
+            ))}
+          </Select>
         </Form.Item>
 
         <Form.Item

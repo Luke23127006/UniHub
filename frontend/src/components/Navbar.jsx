@@ -5,7 +5,7 @@ import { GraduationCap, LayoutGrid, Ticket, User } from 'lucide-react';
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <header className="bg-unihub-primary dark:bg-gray-900 border-b border-unihub-border dark:border-gray-700 shadow-sm">
@@ -47,6 +47,23 @@ export default function Navbar() {
               My Registrations
             </NavLink>
           </li>
+          {user?.role === "Admin" && (
+            <li>
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-unihub-gold"
+                      : "text-unihub-bg/80 dark:text-gray-300 hover:text-unihub-gold"
+                  }`
+                }
+              >
+                <LayoutGrid size={18} className="text-unihub-gold" />
+                Admin Panel
+              </NavLink>
+            </li>
+          )}
         </ul>
 
         {/* Right side: theme toggle + auth action */}

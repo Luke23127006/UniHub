@@ -23,7 +23,7 @@ export class HistoryService {
       let localData: CheckInHistory[] = [];
       
       const localResults: any[] = await db.getAllAsync(
-        `SELECT t.*, q.synced as is_synced_in_queue 
+        `SELECT t.*, q.synced as is_synced_in_queue, q.tid as queue_tid
          FROM tickets t 
          LEFT JOIN sync_queue q ON t.tid = q.tid
          WHERE t.status = 1 AND (t.student_name LIKE ? OR t.student_code LIKE ?) 
@@ -31,15 +31,21 @@ export class HistoryService {
         [`%${search}%`, `%${search}%`]
       );
  
-      localData = localResults.map(r => ({
-        id: r.tid,
-        studentName: r.student_name,
-        studentCode: r.student_code,
-        workshopTitle: r.workshop_title || 'Workshop tại máy',
-        checkInTime: r.checkin_time,
-        isOffline: true,
-        isLocalOnly: r.is_synced_in_queue !== 1 // If synced in queue, it's NOT local only anymore
-      }));
+      localData = localResults.map(r => {
+        // If there's no entry in sync_queue, it was already synced on the server when pre-fetched.
+        // It should NOT be marked as pending (isLocalOnly = false).
+        const isLocalOnly = r.queue_tid ? r.is_synced_in_queue !== 1 : false;
+
+        return {
+          id: r.tid,
+          studentName: r.student_name,
+          studentCode: r.student_code,
+          workshopTitle: r.workshop_title || 'Workshop tại máy',
+          checkInTime: r.checkin_time || new Date().toISOString(),
+          isOffline: true,
+          isLocalOnly: isLocalOnly
+        };
+      });
 
       // 2. Fetch Server History
       let serverData: CheckInHistory[] = [];
