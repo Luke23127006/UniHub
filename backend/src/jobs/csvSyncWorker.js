@@ -23,6 +23,7 @@ const prisma = require("../config/db");
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const BATCH_SIZE = 500;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -58,8 +59,17 @@ function createCsvStream(filePath) {
  * Flushes a batch of parsed rows to the database using a single
  * transaction. Each student is upserted by student_code so re-running
  * the worker on the same file is safe.
+ * Returns { inserted, updated } counts for logging.
  */
 async function flushBatch(batch) {
+  // Pre-check which codes already exist so we can log inserted vs updated.
+  const codes = batch.map((r) => (r["MSSV"] || "").trim());
+  const existing = await prisma.student.findMany({
+    where: { student_code: { in: codes } },
+    select: { student_code: true },
+  });
+  const existingSet = new Set(existing.map((s) => s.student_code));
+
   await prisma.$transaction(
     batch.map((row) => {
       const student_code = (row["MSSV"] || "").trim();
@@ -68,20 +78,26 @@ async function flushBatch(batch) {
 
       return prisma.student.upsert({
         where: { student_code },
-        create: {
-          student_code,
-          full_name,
-          email,
-          synced_at: new Date(),
-        },
-        update: {
-          full_name,
-          email,
-          synced_at: new Date(),
-        },
+        create: { student_code, full_name, email, synced_at: new Date() },
+        update: { full_name, email, synced_at: new Date() },
       });
     })
   );
+
+  let inserted = 0;
+  let updated = 0;
+  for (const row of batch) {
+    const code = (row["MSSV"] || "").trim();
+    const name = (row["Họ và Tên"] || "").trim();
+    if (existingSet.has(code)) {
+      console.log(`[CSV Sync]   ↺  UPDATED   MSSV=${code}  name="${name}"`);
+      updated++;
+    } else {
+      console.log(`[CSV Sync]   ✓  INSERTED  MSSV=${code}  name="${name}"`);
+      inserted++;
+    }
+  }
+  return { inserted, updated };
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -107,6 +123,8 @@ async function run() {
   let syncLog;
   let totalRows = 0;
   let processedRows = 0;
+  let insertedRows = 0;
+  let updatedRows = 0;
   let errorRows = 0;
   const errorDetails = [];
   const MAX_ERROR_DETAILS = 100;
@@ -127,21 +145,35 @@ async function run() {
       totalRows++;
 
       const student_code = (row["MSSV"] || "").trim();
+      const email = (row["Email"] || "").trim();
+      const full_name = (row["Họ và Tên"] || "").trim();
+
+      // ── Validation ──────────────────────────────────────────────────────
       if (!student_code) {
         errorRows++;
-        if (errorDetails.length < MAX_ERROR_DETAILS) {
-          errorDetails.push(`Row ${totalRows}: missing MSSV`);
-        }
+        const msg = `Row ${totalRows}: ⚠  SKIPPED — missing MSSV (name: "${full_name}", email: "${email}")`;
+        console.warn(`[CSV Sync] ${msg}`);
+        if (errorDetails.length < MAX_ERROR_DETAILS) errorDetails.push(msg);
+        continue;
+      }
+
+      if (!EMAIL_REGEX.test(email)) {
+        errorRows++;
+        const msg = `Row ${totalRows}: ⚠  SKIPPED — invalid email format (MSSV: "${student_code}", email: "${email}")`;
+        console.warn(`[CSV Sync] ${msg}`);
+        if (errorDetails.length < MAX_ERROR_DETAILS) errorDetails.push(msg);
         continue;
       }
 
       batch.push(row);
 
       if (batch.length >= BATCH_SIZE) {
-        await flushBatch(batch);
+        const { inserted, updated } = await flushBatch(batch);
         processedRows += batch.length;
+        insertedRows += inserted;
+        updatedRows += updated;
         batch = [];
-        console.log(`[CSV Sync] Processed ${processedRows} rows…`);
+        console.log(`[CSV Sync] Batch flushed — processed so far: ${processedRows}`);
       }
     }
 
@@ -151,14 +183,23 @@ async function run() {
 
     // Flush the final partial batch (< BATCH_SIZE rows).
     if (batch.length > 0) {
-      await flushBatch(batch);
+      const { inserted, updated } = await flushBatch(batch);
       processedRows += batch.length;
+      insertedRows += inserted;
+      updatedRows += updated;
     }
 
     const elapsedMs = Date.now() - startTime;
     const elapsedSec = (elapsedMs / 1000).toFixed(2);
 
-    console.log(`[CSV Sync] Finished — ${processedRows} upserted, ${errorRows} skipped, ${elapsedSec}s elapsed`);
+    console.log('');
+    console.log(`[CSV Sync] ════════════════════════════════════════`);
+    console.log(`[CSV Sync] ✅  Import complete in ${elapsedSec}s`);
+    console.log(`[CSV Sync]    Total rows read  : ${totalRows}`);
+    console.log(`[CSV Sync]    ✓  Inserted      : ${insertedRows} new students`);
+    console.log(`[CSV Sync]    ↺  Updated       : ${updatedRows} existing students`);
+    console.log(`[CSV Sync]    ⚠  Skipped       : ${errorRows} invalid rows`);
+    console.log(`[CSV Sync] ════════════════════════════════════════`);
 
     await prisma.csvSyncLog.update({
       where: { id: syncLog.id },
