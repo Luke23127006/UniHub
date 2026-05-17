@@ -15,6 +15,7 @@ const { globalLimiter } = require("./src/middlewares/rateLimiter.middleware");
 const {
   startReleaseReservedSeatsJob,
 } = require("./src/jobs/releaseReservedSeats");
+const { startCsvSyncJob } = require("./src/jobs/csvSyncWorker");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,7 @@ async function bootstrap() {
     await connectRabbitMQ();
     await startNotificationWorker();
     startReleaseReservedSeatsJob();
+    startCsvSyncJob();
     console.log("RabbitMQ connected and background workers started.");
   } catch (error) {
     console.error('Failed to start server:', error);

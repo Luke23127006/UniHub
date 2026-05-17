@@ -237,4 +237,45 @@ async function run() {
   }
 }
 
-run();
+// ── Entry points ───────────────────────────────────────────────────────────
+
+if (require.main === module) {
+  // CLI: node src/jobs/csvSyncWorker.js <path-to-csv>
+  run();
+} else {
+  // Required by server.js — export a scheduler function.
+  const cron    = require('node-cron');
+  const redlock = require('../config/redlock');
+
+  const CRON_SCHEDULE   = process.env.CSV_SYNC_CRON || '0 2 * * *';
+  const JOB_LOCK_KEY    = 'lock:jobs:csvSync';
+  const JOB_LOCK_TTL_MS = 10 * 60 * 1000;
+
+  async function runWithLock() {
+    let lock;
+    try {
+      lock = await redlock.acquire([JOB_LOCK_KEY], JOB_LOCK_TTL_MS);
+    } catch {
+      console.log('[CSV Sync Job] Another instance is already running — skipping.');
+      return;
+    }
+    try {
+      console.log(`[CSV Sync Job] ⏰ Cron fired at ${new Date().toLocaleTimeString('vi-VN')}`);
+      // Override argv so run() picks up the configured file path
+      process.argv[2] = process.env.CSV_SYNC_FILE || path.resolve(__dirname, '../../data/students_spec.csv');
+      await run();
+    } finally {
+      try { await lock.release(); } catch { /* ignore */ }
+    }
+  }
+
+  function startCsvSyncJob() {
+    cron.schedule(CRON_SCHEDULE, runWithLock);
+    const label = CRON_SCHEDULE === '0 2 * * *'
+      ? 'daily at 02:00 AM'
+      : `on schedule: ${CRON_SCHEDULE}`;
+    console.log(`[CSV Sync Job] Scheduled — ${label}`);
+  }
+
+  module.exports = { startCsvSyncJob };
+}
