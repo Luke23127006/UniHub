@@ -52,8 +52,9 @@ describe('TicketDetailPage', () => {
 
     renderPage();
 
-    // New labels: 'System Error: Ticket Not Found' and 'Return to Terminal'
-    expect(screen.getByText(/System Error: Ticket Not Found/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ticket not found/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Return to Registry/i)).toBeInTheDocument();
   });
 

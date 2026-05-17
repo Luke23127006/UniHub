@@ -87,17 +87,16 @@ services:
 
   payment-gateway:
     build:
-      context: ./backend
+      context: ./payment-gateway
       dockerfile: Dockerfile
     container_name: unihub_payment_gateway
     restart: always
     ports:
       - "4000:4000"
-    command: node scripts/mock-gateway.js
     networks:
       - unihub_network
     volumes:
-      - ./backend:/usr/src/app
+      - ./payment-gateway:/usr/src/app
       - /usr/src/app/node_modules
 
   k6:
@@ -107,6 +106,8 @@ services:
     volumes:
       - ./backend/src/tests/loadtest.js:/tests/loadtest.js
     command: run /tests/loadtest.js
+    environment:
+      - K6_API_URL=http://backend:3000/api/v1
     env_file:
       - .env
     depends_on:

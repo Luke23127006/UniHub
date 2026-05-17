@@ -6,3 +6,4 @@ research/circuit-breaker/node_modules
 
 # Claude Code — entire folder is machine-specific
 .claude/
+backend/data/uploads
