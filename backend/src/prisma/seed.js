@@ -238,7 +238,35 @@ async function main() {
     }
   }
 
-  // 4. Seed 100,000 Users and Students using parameterised $executeRaw.
+  // 4. Seed Notification Templates
+  const notificationTemplates = [
+    {
+      event_type: 'ticket.created.event',
+      channel: 'email',
+      subject_template: 'Đăng ký thành công: {{workshopName}}',
+      body_template: 'Chào {{recipientName}},<br><br>Bạn đã đăng ký thành công workshop <strong>{{workshopName}}</strong>. Hẹn gặp bạn tại sự kiện!',
+      is_active: true,
+    },
+    {
+      event_type: 'workshop.cancelled.event',
+      channel: 'email',
+      subject_template: 'Thông báo hủy workshop: {{workshopName}}',
+      body_template: 'Chào {{recipientName}},<br><br>Workshop <strong>{{workshopName}}</strong> đã bị hủy. Chúng tôi xin lỗi vì sự bất tiện này.',
+      is_active: true,
+    },
+  ];
+
+  for (const tmpl of notificationTemplates) {
+    const exists = await prisma.notificationTemplate.findFirst({
+      where: { event_type: tmpl.event_type, channel: tmpl.channel },
+    });
+    if (!exists) {
+      await prisma.notificationTemplate.create({ data: tmpl });
+      console.log(`Created NotificationTemplate: ${tmpl.event_type} (${tmpl.channel})`);
+    }
+  }
+
+  // 5. Seed 100,000 Users and Students using parameterised $executeRaw.
   const existingUserCount = await prisma.user.count();
   if (existingUserCount > 90000) {
     console.log(`Database already has ${existingUserCount} users. Skipping large scale seeding.`);

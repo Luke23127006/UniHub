@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const redlock = require('../config/redlock');
 const paymentService = require('./payment.service');
+const { queueNotification } = require('./notification/notification.service');
 
 const LOCK_TTL_MS = 30_000;
 
@@ -47,7 +48,7 @@ class RegistrationService {
     try {
       const workshopMeta = await prisma.workshop.findUnique({
         where: { id: workshopIdBig },
-        select: { is_paid: true, price: true },
+        select: { is_paid: true, price: true, title: true },
       });
 
       if (!workshopMeta) {
@@ -143,6 +144,14 @@ class RegistrationService {
       const registrationId = registration.id.toString();
 
       if (!workshopMeta.is_paid) {
+        queueNotification(
+          userId,
+          'ticket.created.event',
+          'registration',
+          registration.id,
+          { workshopName: workshopMeta.title },
+        ).catch((err) => console.warn('[RegistrationService] Failed to queue notification:', err.message));
+
         return { outcome: RegistrationOutcome.FREE_CONFIRMED, registrationId };
       }
 
@@ -230,26 +239,15 @@ class RegistrationService {
       return updated;
     });
 
-    // Step 15: Publish event for background workers
-    try {
-      const { getChannel } = require('../config/rabbitmq');
-      const channel = getChannel();
-      if (channel) {
-        const message = {
-          event: 'ticket.created',
-          ticketId: result.id.toString(),
-          studentId: result.student_id.toString(),
-          workshopId: result.workshop_id.toString(),
-          timestamp: new Date().toISOString()
-        };
-        channel.sendToQueue('workshop_registration_queue', Buffer.from(JSON.stringify(message)), {
-          persistent: true
-        });
-        console.log(`[RegistrationService] Published ticket.created event for ID: ${result.id}`);
-      }
-    } catch (err) {
-      console.warn('[RegistrationService] Failed to publish event to RabbitMQ:', err.message);
-      // We don't throw here to avoid failing the payment confirmation if only the queue is down
+    // Queue confirmation notification for the student (non-blocking)
+    if (result.student?.user_id) {
+      queueNotification(
+        result.student.user_id,
+        'ticket.created.event',
+        'registration',
+        result.id,
+        { workshopName: result.workshop.title },
+      ).catch((err) => console.warn('[RegistrationService] Failed to queue notification:', err.message));
     }
 
     return result;
