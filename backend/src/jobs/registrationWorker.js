@@ -1,6 +1,39 @@
-const { getChannel } = require('../config/rabbitmq');
-const RedisLock = require('../utils/redisLock');
-const WorkshopService = require('../services/workshopService');
+const { getChannel } = require("../config/rabbitmq");
+const RedisLock = require("../utils/redisLock");
+const WorkshopService = require("../services/workshop.service");
+
+const LOCK_TTL_MS = 30_000;
+const LOCK_RETRY_DELAY_MS = 500;
+
+const REGISTRATION_QUEUE = "workshop_registration_queue";
+const REGISTRATION_DLQ = "workshop_registration_dlq";
+
+async function sendToDlq(channel, originalPayload, errorMessage) {
+  try {
+    await channel.assertQueue(REGISTRATION_DLQ, { durable: true });
+    const dlqPayload = {
+      ...originalPayload,
+      _error: errorMessage,
+      _failedAt: new Date().toISOString(),
+    };
+    channel.sendToQueue(
+      REGISTRATION_DLQ,
+      Buffer.from(JSON.stringify(dlqPayload)),
+      { persistent: true },
+    );
+    console.error(
+      `[DLQ] Routed failed registration to ${REGISTRATION_DLQ}:`,
+      dlqPayload,
+    );
+  } catch (dlqErr) {
+    console.error(
+      "[DLQ] Failed to publish to dead-letter queue:",
+      dlqErr.message,
+      "Original payload:",
+      originalPayload,
+    );
+  }
+}
 
 async function processRegistrationMessage(msg, channel) {
   if (!msg) return;

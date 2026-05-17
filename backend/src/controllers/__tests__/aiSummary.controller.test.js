@@ -14,7 +14,8 @@ describe('AiSummaryController', () => {
         status: 'completed',
         summary_text: 'Test summary',
         raw_text: 'Raw text'
-      }
+      },
+      user: { id: 'user-1', sub: 'user-1' }
     };
     res = {
       status: jest.fn().mockReturnThis(),
@@ -91,6 +92,57 @@ describe('AiSummaryController', () => {
           id: '1',
           status: 'failed'
         }
+      });
+    });
+  });
+
+  describe('requestSummary', () => {
+    it('should return 200 and success status when trigger is successful', async () => {
+      req.params.id = '1';
+      req.body = { storagePath: 'path/to/file.pdf' };
+      req.user = { id: 'user-1', sub: 'user-1' };
+
+      const mockResult = {
+        summary: { id: BigInt(1), status: 'pending' }
+      };
+
+      AiSummaryService.triggerSummary.mockResolvedValue(mockResult);
+
+      await AiSummaryController.requestSummary(req, res);
+
+      expect(AiSummaryService.triggerSummary).toHaveBeenCalledWith({
+        workshopId: '1',
+        fileName: 'manual_trigger.pdf',
+        storagePath: 'path/to/file.pdf',
+        fileSize: 0,
+        userId: 'user-1'
+      });
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'AI summary task triggered successfully',
+        data: {
+          summaryId: '1',
+          status: 'pending'
+        }
+      });
+    });
+
+    it('should return 400 when storagePath is missing', async () => {
+      req.body = {};
+      await AiSummaryController.requestSummary(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('should return 500 when service fails', async () => {
+      req.body = { storagePath: 'path' };
+      AiSummaryService.triggerSummary.mockRejectedValue(new Error('Trigger failed'));
+
+      await AiSummaryController.requestSummary(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Trigger failed'
       });
     });
   });

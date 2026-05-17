@@ -1,4 +1,6 @@
 const WorkshopService = require('../services/workshop.service');
+const AiSummaryService = require('../services/aiSummary.service');
+const prisma = require('../config/db');
 
 class WorkshopController {
   static async list(req, res) {
@@ -7,7 +9,7 @@ class WorkshopController {
       const { limit, offset, status } = req.query;
       const result = await WorkshopService.listWorkshops({ limit, offset, status });
       console.log(`[WorkshopController] Successfully fetched ${result.data.length} workshops.`);
-      
+
       res.json({
         status: 'success',
         data: result
@@ -24,11 +26,33 @@ class WorkshopController {
     }
   }
 
+  static async create(req, res) {
+    try {
+      if (!req.user || !req.user.sub) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+      }
+      const newWorkshop = await WorkshopService.createWorkshop(req.body, req.user.sub);
+      res.json({
+        status: 'success',
+        data: {
+          id: newWorkshop.id.toString(),
+          message: 'Workshop created successfully'
+        }
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error creating workshop:', error);
+      res.status(500).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
   static async getById(req, res) {
     try {
       const { id } = req.params;
       const workshop = await WorkshopService.getWorkshopById(id);
-      
+
       if (!workshop) {
         return res.status(404).json({
           status: 'error',
@@ -55,44 +79,87 @@ class WorkshopController {
     }
   }
 
-  /**
-   * Manual trigger for AI summary processing (useful for testing)
-   */
-  static async triggerAiSummary(req, res) {
+  static async uploadPdfAsync(req, res) {
     try {
-      const { id } = req.params;
-      const { fileName, storagePath } = req.body;
-      const userId = req.user.id; // From verifyToken
-
-      if (!storagePath) {
+      if (!req.file) {
         return res.status(400).json({
           status: 'error',
-          message: 'storagePath is required'
+          message: 'No PDF file uploaded'
         });
       }
 
-      const result = await WorkshopService.addDocumentAndTriggerSummary({
-        workshopId: id,
-        fileName: fileName || 'manual_trigger.pdf',
-        storagePath: storagePath,
-        fileSize: 0,
-        userId: userId
-      });
+      const filePath = req.file.path;
+      const jobId = await AiSummaryService.triggerPdfAnalysis(filePath);
 
       res.json({
         status: 'success',
-        message: 'AI summary task triggered successfully',
         data: {
-          summaryId: result.summary.id.toString(),
-          status: result.summary.status
+          jobId,
+          storagePath: filePath
         }
       });
     } catch (error) {
-      console.error('[WorkshopController] Error triggering AI summary:', error);
+      console.error('[WorkshopController] Error starting PDF analysis:', error);
       res.status(500).json({
         status: 'error',
         message: error.message
       });
+    }
+  }
+
+  static async getPdfJobStatus(req, res) {
+    try {
+      const { jobId } = req.params;
+      const status = await AiSummaryService.getJobStatus(jobId);
+
+      if (!status) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Job not found or expired'
+        });
+      }
+
+      res.json({
+        status: 'success',
+        data: status
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error checking PDF job status:', error);
+      res.status(500).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
+  static async listRooms(req, res) {
+    try {
+      const rooms = await prisma.room.findMany({
+        where: { is_active: true },
+        select: { id: true, room_code: true, name: true, capacity: true }
+      });
+      res.json({
+        status: 'success',
+        data: rooms
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error listing rooms:', error);
+      res.status(500).json({ status: 'error', message: error.message });
+    }
+  }
+
+  static async listSpeakers(req, res) {
+    try {
+      const speakers = await prisma.speaker.findMany({
+        select: { id: true, full_name: true, title: true, organization: true }
+      });
+      res.json({
+        status: 'success',
+        data: speakers
+      });
+    } catch (error) {
+      console.error('[WorkshopController] Error listing speakers:', error);
+      res.status(500).json({ status: 'error', message: error.message });
     }
   }
 }

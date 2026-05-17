@@ -21,6 +21,35 @@ async function main() {
     });
   }
 
+  // 1.1 Assign Admin role to creator
+  let adminRole = await prisma.role.findUnique({
+    where: { name: "Admin" },
+  });
+  if (!adminRole) {
+    adminRole = await prisma.role.create({
+      data: { name: "Admin", description: "System Administrator" },
+    });
+  }
+
+  const existingAdminRole = await prisma.userRole.findUnique({
+    where: {
+      user_id_role_id: {
+        user_id: creator.id,
+        role_id: adminRole.id,
+      },
+    },
+  });
+
+  if (!existingAdminRole) {
+    await prisma.userRole.create({
+      data: {
+        user_id: creator.id,
+        role_id: adminRole.id,
+      },
+    });
+    console.log("Admin role assigned to: admin@unihub.com");
+  }
+
   // 2. Create a standard test student user
   let testStudent = await prisma.user.findUnique({ where: { email: 'test@unihub.com' } });
   if (!testStudent) {
@@ -88,18 +117,30 @@ async function main() {
     }
   }
 
-  // 2. Create a mock room
-  let room = await prisma.room.findFirst({ where: { room_code: "ROOM-1" } });
-  if (!room) {
-    room = await prisma.room.create({
-      data: {
-        room_code: "ROOM-1",
-        name: "Grand Hall",
-        capacity: 20000,
-        is_active: true,
-      },
-    });
+  // 2. Create mock rooms
+  const roomsData = [
+    { room_code: "ROOM-1", name: "Grand Hall", capacity: 20000 },
+    { room_code: "ROOM-2", name: "Seminar Room B", capacity: 100 },
+    { room_code: "ROOM-3", name: "Lab 302", capacity: 50 },
+    { room_code: "ROOM-4", name: "Auditorium A", capacity: 500 },
+    { room_code: "ROOM-5", name: "Conference Room C", capacity: 80 },
+    { room_code: "ROOM-6", name: "Tech Lab 101", capacity: 60 }
+  ];
+
+  for (const r of roomsData) {
+    let existingRoom = await prisma.room.findFirst({ where: { room_code: r.room_code } });
+    if (!existingRoom) {
+      await prisma.room.create({
+        data: {
+          room_code: r.room_code,
+          name: r.name,
+          capacity: r.capacity,
+          is_active: true
+        }
+      });
+    }
   }
+  const room = await prisma.room.findFirst({ where: { room_code: "ROOM-1" } });
 
   // 2.5. Create 5 Mock Speakers
   const speakersData = [

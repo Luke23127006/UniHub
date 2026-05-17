@@ -1,5 +1,5 @@
 const prisma = require('../config/db');
-const { getChannel } = require('../config/rabbitmq');
+const { redisPublisher } = require('../config/redisPubSub');
 
 class WorkshopService {
   /**
@@ -12,7 +12,7 @@ class WorkshopService {
 
     // Create where clause dynamically
     const where = {};
-    
+
     // Defensive check: ignore status if it's null, undefined, 'all', or strings of null/undefined
     const invalidStatuses = ['all', 'null', 'undefined'];
     if (status && !invalidStatuses.includes(String(status).toLowerCase())) {
@@ -21,12 +21,12 @@ class WorkshopService {
 
     const [total, ongoingCount, workshops] = await Promise.all([
       prisma.workshop.count({ where }),
-      prisma.workshop.count({ 
-        where: { 
+      prisma.workshop.count({
+        where: {
           ...where,
           start_time: { lte: now },
           end_time: { gte: now }
-        } 
+        }
       }),
       prisma.workshop.findMany({
         where,
@@ -61,12 +61,12 @@ class WorkshopService {
     // Flatten speakers and calculate counts
     const formattedWorkshops = workshops.map(ws => {
       // "Occupied" means any registration that isn't cancelled
-      const occupiedRegs = ws.registrations.filter(r => 
+      const occupiedRegs = ws.registrations.filter(r =>
         ['confirmed', 'pending_payment', 'attended'].includes(r.status)
       );
       const checkinCount = ws.registrations.filter(r => r.checkin).length;
 
-      const { registrations, ...wsData } = ws; 
+      const { registrations, ...wsData } = ws;
 
       return {
         ...wsData,
@@ -108,7 +108,13 @@ class WorkshopService {
           include: {
             speaker: true
           }
-        }
+        },
+        ai_summaries: {
+          where: { status: 'completed' },
+          select: { summary_text: true, completed_at: true },
+          orderBy: { completed_at: 'desc' },
+          take: 1,
+        },
       }
     });
 
@@ -129,63 +135,177 @@ class WorkshopService {
   }
 
   /**
-   * Adds a document to a workshop and triggers AI summary processing
-   * @param {object} data - { workshopId, fileName, storagePath, fileSize, userId }
+   * Create a new workshop
    */
-  static async addDocumentAndTriggerSummary(data) {
-    const { workshopId, fileName, storagePath, fileSize, userId } = data;
-    const wsIdBig = BigInt(workshopId);
-    const userIdBig = BigInt(userId);
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Create WorkshopDocument
-      const doc = await tx.workshopDocument.create({
-        data: {
-          workshop_id: wsIdBig,
-          original_file_name: fileName,
-          storage_path: storagePath,
-          file_size_bytes: fileSize ? BigInt(fileSize) : null,
-          mime_type: 'application/pdf',
-          uploaded_by: userIdBig,
-          upload_status: 'uploaded'
-        }
-      });
-
-      // 2. Create AiSummary record
-      const summary = await tx.aiSummary.create({
-        data: {
-          workshop_id: wsIdBig,
-          document_id: doc.id,
-          status: 'pending',
-          ai_model: 'gemini-1.5-flash'
-        }
-      });
-
-      return { doc, summary };
-    });
-
-    // 3. Trigger RabbitMQ task
-    try {
-      const channel = getChannel();
-      if (channel) {
-        const message = {
-          summary_id: result.summary.id.toString(),
-          file_path: storagePath, // In production, this might be a full URL or S3 path
-          workshop_id: workshopId.toString()
-        };
-        
-        channel.sendToQueue('ai_summary_tasks', Buffer.from(JSON.stringify(message)), {
-          persistent: true
-        });
-        console.log(`[WorkshopService] Published AI summary task for summary ID: ${result.summary.id}`);
-      }
-    } catch (err) {
-      console.warn('[WorkshopService] Failed to publish AI task to RabbitMQ:', err.message);
-      // We don't fail the whole request if RabbitMQ is down, 
-      // but the summary will stay in PENDING status.
+  static async createWorkshop(data, userId) {
+    const { title, speaker, startTime, endTime, roomId, totalSeats, pricing, pdfJobId } = data;
+    
+    // Find room by room_code to get its ID
+    const room = await prisma.room.findUnique({ where: { room_code: roomId } });
+    if (!room) {
+      throw new Error(`Room with code ${roomId} not found`);
     }
 
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the workshop
+      const newWorkshop = await tx.workshop.create({
+        data: {
+          title,
+          description: '', // Can be updated later
+          event_day: new Date(startTime),
+          start_time: new Date(startTime),
+          end_time: new Date(endTime),
+          room_id: room.id,
+          capacity: totalSeats,
+          available_seats: totalSeats,
+          price: pricing.isFree ? null : pricing.amount,
+          status: 'published',
+          created_by: BigInt(userId),
+        }
+      });
+
+      // Handle Speaker (simplistic: create or find speaker, link to workshop)
+      if (speaker) {
+        let speakerRecord = await tx.speaker.findFirst({ where: { full_name: speaker } });
+        if (!speakerRecord) {
+          speakerRecord = await tx.speaker.create({
+            data: { full_name: speaker }
+          });
+        }
+        
+        await tx.workshopSpeaker.create({
+          data: {
+            workshop_id: newWorkshop.id,
+            speaker_id: speakerRecord.id,
+            is_main_speaker: true
+          }
+        });
+      }
+
+      // If there was an AI PDF job, link the results
+      if (pdfJobId) {
+        // We need AiSummaryService to get job status
+        const AiSummaryService = require('./aiSummary.service');
+        const jobData = await AiSummaryService.getJobStatus(pdfJobId);
+        
+        if (jobData && jobData.status === 'completed') {
+           // We might not have the original file name easily, use a placeholder
+           const doc = await tx.workshopDocument.create({
+             data: {
+               workshop_id: newWorkshop.id,
+               original_file_name: 'uploaded_document.pdf',
+               storage_path: 'local_storage', // in a real app, this would be the actual path
+               mime_type: 'application/pdf',
+               uploaded_by: BigInt(userId),
+               upload_status: 'uploaded'
+             }
+           });
+
+           await tx.aiSummary.create({
+             data: {
+               workshop_id: newWorkshop.id,
+               document_id: doc.id,
+               status: 'completed',
+               ai_model: 'gemini-1.5-flash',
+               raw_text: jobData.raw_text || '',
+               summary_text: jobData.summary_text || '',
+               suggested_title: jobData.suggested_title || '',
+               speaker_name: jobData.speaker_name || '',
+               completed_at: new Date()
+             }
+           });
+        }
+      }
+
+      return newWorkshop;
+    });
+
     return result;
+  }
+
+  /**
+   * Processes a workshop registration (called by worker)
+   * @param {string|number} userId 
+   * @param {string|number} workshopId 
+   */
+  static async processRegistration(userId, workshopId) {
+    const userIdBig = BigInt(userId);
+    const workshopIdBig = BigInt(workshopId);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check available_seats
+      const workshop = await tx.workshop.findUnique({
+        where: { id: workshopIdBig },
+        select: { id: true, available_seats: true, capacity: true }
+      });
+
+      if (!workshop) {
+        throw new Error(`Workshop ${workshopId} not found`);
+      }
+
+      // 2. Find Student
+      const student = await tx.student.findUnique({
+        where: { user_id: userIdBig },
+        select: { id: true }
+      });
+
+      if (!student) {
+        throw new Error(`Student record not found for user ${userId}`);
+      }
+
+      // 3. Check existing registration
+      const existingRegistration = await tx.registration.findUnique({
+        where: {
+          student_id_workshop_id: {
+            student_id: student.id,
+            workshop_id: workshop.id,
+          }
+        }
+      });
+
+      if (existingRegistration) {
+        throw new Error(`User ${userId} already registered for workshop ${workshopId}`);
+      }
+
+      if (workshop.available_seats > 0) {
+        const updatedWorkshop = await tx.workshop.update({
+          where: { id: workshopIdBig },
+          data: { available_seats: { decrement: 1 } },
+          select: { available_seats: true },
+        });
+
+        await tx.registration.create({
+          data: {
+            student_id: student.id,
+            workshop_id: workshop.id,
+            status: 'pending_payment'
+          }
+        });
+
+        return {
+          success: true,
+          message: `Successfully registered user ${userId} for workshop ${workshopId}`,
+          _seatBroadcast: { workshopId: Number(workshopIdBig), availableSeats: updatedWorkshop.available_seats },
+        };
+      }
+
+      return {
+        success: false,
+        message: `Workshop ${workshopId} is sold out. Skipping registration for user ${userId}.`
+      };
+    });
+
+    const { _seatBroadcast, ...publicResult } = result;
+
+    if (_seatBroadcast) {
+      try {
+        await redisPublisher.publish('seat_updates', JSON.stringify(_seatBroadcast));
+      } catch (err) {
+        console.error('[Redis Pub] Failed to broadcast seat_updates — registration unaffected:', err);
+      }
+    }
+
+    return publicResult;
   }
 }
 
