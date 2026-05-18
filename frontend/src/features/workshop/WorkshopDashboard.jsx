@@ -100,9 +100,12 @@ export default function WorkshopDashboard({ workshops = [], meta = {} }) {
         (typeFilter === 'free' && !w.is_paid) ||
         (typeFilter === 'paid' && w.is_paid);
 
-      return matchesSearch && matchesType;
+      const matchesStatus =
+        statusFilter === 'all' || w.status === statusFilter;
+
+      return matchesSearch && matchesType && matchesStatus;
     });
-  }, [search, typeFilter, liveWorkshops]);
+  }, [search, typeFilter, statusFilter, liveWorkshops]);
 
   const ActiveView = VIEW_COMPONENTS[viewMode];
 
