@@ -2,6 +2,15 @@ const prisma = require('../config/db');
 const redlock = require('../config/redlock');
 const paymentService = require('./payment.service');
 const { queueNotification } = require('./notification/notification.service');
+const { redisPublisher } = require('../config/redisPubSub');
+
+async function publishSeatUpdate(workshopId, availableSeats) {
+  try {
+    await redisPublisher.publish('seat_updates', JSON.stringify({ workshopId: Number(workshopId), availableSeats }));
+  } catch (err) {
+    console.error('[RegistrationService] Failed to publish seat update:', err.message);
+  }
+}
 
 const LOCK_TTL_MS = 30_000;
 
@@ -71,7 +80,7 @@ class RegistrationService {
           ? 'reserved'
           : 'pending_payment';
 
-      const registration = await prisma.$transaction(async (tx) => {
+      const { registration, availableSeats } = await prisma.$transaction(async (tx) => {
         // [PHASE 5] DB-level pessimistic lock using raw SQL
         const workshops = await tx.$queryRaw`SELECT id, available_seats FROM workshops WHERE id = ${workshopIdBig} FOR UPDATE`;
         const workshop = workshops[0];
@@ -124,22 +133,27 @@ class RegistrationService {
           });
         }
 
-        await tx.workshop.update({
+        const updatedWorkshop = await tx.workshop.update({
           where: { id: workshopIdBig },
           data: { available_seats: { decrement: 1 } },
+          select: { available_seats: true },
         });
 
-        return tx.registration.create({
+        const newRegistration = await tx.registration.create({
           data: {
             student_id: student.id,
             workshop_id: workshopIdBig,
             status: registrationStatus,
           },
         });
+
+        return { registration: newRegistration, availableSeats: updatedWorkshop.available_seats };
       }, {
         maxWait: 15000, // Wait up to 15s to get a connection in pool under massive spikes
         timeout: 20000  // Allow the transaction up to 20s to complete
       });
+
+      await publishSeatUpdate(workshopIdBig, availableSeats);
 
       const registrationId = registration.id.toString();
 
@@ -279,14 +293,20 @@ class RegistrationService {
 
       // 3. If a record was actually deleted, restore the seat
       if (count > 0) {
-        await tx.workshop.update({
+        const restoredWorkshop = await tx.workshop.update({
           where: { id: workshopId },
-          data: { available_seats: { increment: 1 } }
+          data: { available_seats: { increment: 1 } },
+          select: { available_seats: true },
         });
-        return true;
+        return restoredWorkshop.available_seats;
       }
-      return false;
+      return null;
     });
+
+    if (result !== null) {
+      await publishSeatUpdate(workshopId, result);
+    }
+    return result !== null;
   }
 
   /**
@@ -341,13 +361,17 @@ class RegistrationService {
       });
 
       // Restore seat
-      await tx.workshop.update({
+      const restoredWorkshop = await tx.workshop.update({
         where: { id: registration.workshop_id },
-        data: { available_seats: { increment: 1 } }
+        data: { available_seats: { increment: 1 } },
+        select: { available_seats: true },
       });
 
-      return updated;
+      return { updated, availableSeats: restoredWorkshop.available_seats, workshopId: registration.workshop_id };
     });
+
+    await publishSeatUpdate(result.workshopId, result.availableSeats);
+    return result.updated;
   }
 }
 

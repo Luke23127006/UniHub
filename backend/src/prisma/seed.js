@@ -283,10 +283,11 @@ async function main() {
         const uid = i + j;
         const email = `student${uid}@unihub.local`;
         const fullName = `Test Student ${uid}`;
-        const studentCode = `STD${uid.toString().padStart(6, '0')}`;
+        const passwordHash = defaultHash; // Reuse the same hash for all test users
+        const studentCode = `STD${uid.toString().padStart(6, "0")}`;
 
         userValues.push(
-          Prisma.sql`(${BigInt(uid)}, ${email}, ${fullName}, true, NOW(), NOW())`
+          Prisma.sql`(${BigInt(uid)}, ${email}, ${fullName}, ${passwordHash}, true, NOW(), NOW())`,
         );
         studentValues.push(
           Prisma.sql`(${BigInt(uid)}, ${studentCode}, ${fullName}, ${email}, true, NOW(), NOW())`
@@ -295,7 +296,7 @@ async function main() {
 
       await prisma.$executeRaw(
         Prisma.sql`
-          INSERT INTO "users" (id, email, full_name, is_active, created_at, updated_at)
+          INSERT INTO "users" (id, email, full_name, password_hash, is_active, created_at, updated_at)
           VALUES ${Prisma.join(userValues)}
           ON CONFLICT (id) DO NOTHING
         `
