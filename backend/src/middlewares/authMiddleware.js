@@ -1,10 +1,4 @@
-/**
- * Mock Auth Middleware
- * For the purpose of this task, we will mock the authentication
- * by expecting a `x-user-id` header and attaching it to req.user.
- */
-const authMiddleware = (req, res, next) => {
-  const userIdHeader = req.headers['x-user-id'];
+const jwt = require('jsonwebtoken');
 
 /**
  * Tier-1 Authentication Middleware.
@@ -16,7 +10,7 @@ const authMiddleware = (req, res, next) => {
  * @type {import('express').RequestHandler}
  */
 const verifyToken = (req, res, next) => {
-  // Allow Mock Authentication under test/development for load testing (k6 uses x-user-id)
+  // Allow mock authentication in non-production for load testing (k6 uses x-user-id)
   if (process.env.NODE_ENV !== 'production' && req.headers['x-user-id']) {
     req.user = {
       sub: req.headers['x-user-id'],
@@ -39,18 +33,31 @@ const verifyToken = (req, res, next) => {
     });
   }
 
-  const userId = parseInt(userIdHeader, 10);
-  
-  if (isNaN(userId)) {
-    return res.status(401).json({ message: 'Unauthorized: Invalid user ID format' });
+  const token = authHeader.slice(7);
+  const secret = process.env.JWT_ACCESS_SECRET;
+
+  if (!secret) {
+    console.error('[verifyToken] JWT_ACCESS_SECRET is not configured');
+    return res.status(500).json({
+      status: 'error',
+      error: { code: 'SERVER_CONFIG_ERROR', message: 'Server configuration error' },
+    });
   }
 
-  // Mocking the user object
-  req.user = {
-    id: userId
-  };
-
-  next();
+  try {
+    const decoded = jwt.verify(token, secret);
+    req.user = decoded;
+    return next();
+  } catch (err) {
+    console.warn(`[verifyToken] Invalid token: ${err.message}`);
+    return res.status(401).json({
+      status: 'error',
+      error: {
+        code: 'INVALID_TOKEN',
+        message: 'Token is invalid or expired',
+      },
+    });
+  }
 };
 
-module.exports = authMiddleware;
+module.exports = verifyToken;
