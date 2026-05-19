@@ -40,6 +40,7 @@ let isShuttingDown = false;
 
 async function initBackgroundServices() {
   if (isShuttingDown) return;
+}
 
 async function bootstrap() {
   try {
